@@ -43,11 +43,18 @@ def test_qsvm_classifier_fit_predict():
 
 
 def test_vqc_training():
+    n_qubits = 4
+
+    X_train = np.random.uniform(-np.pi, np.pi, size=(20, n_qubits))
+    y_train = np.array([0, 1] * 10)
+
+    X_test = np.random.uniform(-np.pi, np.pi, size=(8, n_qubits))
+
     vqc = VariationalQuantumClassifier(
-    n_qubits=n_qubits,
-    n_layers=1,
-    epochs=3,
-    learning_rate=0.05
+        n_qubits=n_qubits,
+        n_layers=1,
+        epochs=3,
+        learning_rate=0.05
     )
 
     initial_weights = vqc._init_weights().copy()
