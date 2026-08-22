@@ -11,10 +11,11 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from sklearn.model_selection import train_test_split
 
+from qmlkit.api.training_service import TrainRequest, execute_training_job
 from qmlkit.data.biomimetic_voc_generator import BiomimeticVOCGenerator
 from qmlkit.data.feature_selector import QuantumFeatureSelector
 from qmlkit.data.preprocessor import BiomedicalDataPipeline
-from qmlkit.evaluation.benchmark_suite import compute_qubit_covariance
+from qmlkit.evaluation.benchmark_suite import BenchmarkSuite, compute_qubit_covariance
 from qmlkit.explainability.biomarker_mapper import BiomarkerAttributionEngine
 from qmlkit.quantum.qsvm import QSVMClassifier
 
@@ -187,6 +188,56 @@ def create_app() -> FastAPI:
             "top_biomarkers": explanation.top_biomarkers,
             "biochemical_pathways": explanation.pathway_contributions,
             "clinical_summary": explanation.summary_text
+        }
+
+    @app.post("/api/v1/train")
+    async def train_model_endpoint(req: TrainRequest):
+        """Train any quantum or classical model on demand and return metrics & loss curve."""
+        try:
+            return execute_training_job(req)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Training failed: {exc}") from exc
+
+    @app.post("/api/v1/benchmark/run")
+    async def run_benchmark_endpoint(req: BenchmarkRequest):
+        """Run multi-model comparative leaderboard across Quantum and Classical models."""
+        try:
+            generator = BiomimeticVOCGenerator(random_state=42)
+            cohort = generator.generate_cohort(
+                samples_per_class=req.n_samples_per_class,
+                cancer_types=["Healthy", req.target_cancer]
+            )
+            y = cohort.metadata["label_binary"].values
+            df_X = cohort.df_features
+
+            idx_train, idx_test = train_test_split(
+                np.arange(len(y)), test_size=0.2, stratify=y, random_state=42
+            )
+
+            suite = BenchmarkSuite(n_qubits=req.n_qubits, random_state=42)
+            df_res = suite.run_benchmark(
+                X_train_raw=df_X.iloc[idx_train],
+                y_train=y[idx_train],
+                X_test_raw=df_X.iloc[idx_test],
+                y_test=y[idx_test]
+            )
+            return {
+                "target_cancer": req.target_cancer,
+                "n_qubits": req.n_qubits,
+                "leaderboard": df_res.to_dict(orient="records")
+            }
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Benchmark failed: {exc}") from exc
+
+    @app.get("/api/v1/dataset/stats")
+    async def dataset_stats():
+        """Provide dataset stats and biomarker definitions."""
+        generator = BiomimeticVOCGenerator(random_state=42)
+        return {
+            "n_sensors": generator.n_sensors,
+            "compounds": generator.compounds,
+            "cancer_types": generator.voc_cfg.cancer_types,
+            "features_per_sensor": ["max_amplitude", "auc_integral", "adsorption_rise", "desorption_decay"]
         }
 
     @app.get("/", response_class=HTMLResponse)

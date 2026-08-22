@@ -25,6 +25,9 @@ from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from qmlkit.api.training_service import TrainRequest, execute_training_job
+from qmlkit.data.biomimetic_voc_generator import BiomimeticVOCGenerator
+from qmlkit.evaluation.benchmark_suite import BenchmarkSuite
 from qmlkit.hardware.kennel_features import KENNEL_FEATURE_NAMES, extract_window_features
 from qmlkit.hardware.kennel_streaming import KennelSettings, create_stream_source
 from qmlkit.hardware.protocol import KennelFrame
@@ -245,6 +248,61 @@ def create_kennel_app(settings: Optional[KennelSettings] = None) -> FastAPI:
         except RecordingError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         return {"status": "saved", "path": str(path) if path else None}
+
+    @app.post("/api/v1/train")
+    async def train_model_endpoint(req: TrainRequest):
+        """Train any quantum or classical model on demand and return metrics & loss curve."""
+        try:
+            return execute_training_job(req)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Training failed: {exc}") from exc
+
+    @app.post("/api/v1/benchmark/run")
+    async def run_benchmark_endpoint(req: Dict[str, Any] = Body(...)):
+        """Run multi-model comparative leaderboard across Quantum and Classical models."""
+        try:
+            from sklearn.model_selection import train_test_split
+            target_cancer = req.get("target_cancer", "Lung_Cancer")
+            n_samples = int(req.get("n_samples_per_class", 60))
+            n_qubits = int(req.get("n_qubits", 6))
+
+            generator = BiomimeticVOCGenerator(random_state=42)
+            cohort = generator.generate_cohort(
+                samples_per_class=n_samples,
+                cancer_types=["Healthy", target_cancer]
+            )
+            y = cohort.metadata["label_binary"].values
+            df_X = cohort.df_features
+
+            idx_train, idx_test = train_test_split(
+                np.arange(len(y)), test_size=0.2, stratify=y, random_state=42
+            )
+
+            suite = BenchmarkSuite(n_qubits=n_qubits, random_state=42)
+            df_res = suite.run_benchmark(
+                X_train_raw=df_X.iloc[idx_train],
+                y_train=y[idx_train],
+                X_test_raw=df_X.iloc[idx_test],
+                y_test=y[idx_test]
+            )
+            return {
+                "target_cancer": target_cancer,
+                "n_qubits": n_qubits,
+                "leaderboard": df_res.to_dict(orient="records")
+            }
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Benchmark failed: {exc}") from exc
+
+    @app.get("/api/v1/dataset/stats")
+    async def dataset_stats():
+        """Provide dataset stats and biomarker definitions."""
+        generator = BiomimeticVOCGenerator(random_state=42)
+        return {
+            "n_sensors": generator.n_sensors,
+            "compounds": generator.compounds,
+            "cancer_types": generator.voc_cfg.cancer_types,
+            "features_per_sensor": ["max_amplitude", "auc_integral", "adsorption_rise", "desorption_decay"]
+        }
 
     @app.websocket("/ws/stream")
     async def ws_stream(socket: WebSocket) -> None:
