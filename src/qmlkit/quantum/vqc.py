@@ -10,7 +10,7 @@ import pennylane as qml
 import torch
 import torch.nn as nn
 
-from qmlkit.quantum.feature_maps import BaseFeatureMap, BioZZFeatureMap, get_feature_map
+from qmlkit.quantum.feature_maps import get_feature_map
 
 
 class VariationalQuantumClassifier:
@@ -96,17 +96,19 @@ class VariationalQuantumClassifier:
         opt = qml.AdamOptimizer(stepsize=self.learning_rate)
         weights_var = pnp.array(self.weights, requires_grad=True)
         bias_var = pnp.array(self.bias, requires_grad=True)
-        
+
+        batch_rng = np.random.default_rng(42)
+
         def cost_fn(w, b, x_batch, y_batch):
             preds = pnp.stack([self._qnode(x, w) + b for x in x_batch])
             # Margin MSE loss
             return pnp.mean((preds - y_batch) ** 2)
 
         batch_size = min(32, len(X_train))
-        n_batches = len(X_train) // batch_size
+        n_batches = int(np.ceil(len(X_train) / batch_size))
 
         for epoch in range(self.epochs):
-            indices = np.random.permutation(len(X_train))
+            indices = batch_rng.permutation(len(X_train))
             epoch_losses = []
 
             for b in range(max(1, n_batches)):

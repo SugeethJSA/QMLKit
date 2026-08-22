@@ -77,7 +77,7 @@ class QuantumConvolutionalClassifier:
             # 3. Pooling Layer 1 (halves active qubits: reduces 8 -> 4, or 4 -> 2)
             active_qubits_layer1 = []
             for i in range(0, self.n_qubits, 2):
-                self._pool_block(weights[5:7], source_wire=i + 1, sink_wire=i)
+                self._pool_block(weights[5:7], source_wire=(i + 1) % self.n_qubits, sink_wire=i)
                 active_qubits_layer1.append(i)
 
             # 4. Convolution Layer 2
@@ -112,10 +112,10 @@ class QuantumConvolutionalClassifier:
             return np.mean((preds - y_batch) ** 2)
 
         batch_size = min(32, len(X_train))
-        n_batches = len(X_train) // batch_size
+        n_batches = int(np.ceil(len(X_train) / batch_size))
 
         for _ in range(self.epochs):
-            indices = np.random.permutation(len(X_train))
+            indices = rng.permutation(len(X_train))
             epoch_losses = []
 
             for b in range(max(1, n_batches)):

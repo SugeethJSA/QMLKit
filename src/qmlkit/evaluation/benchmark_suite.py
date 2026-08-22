@@ -139,9 +139,10 @@ def compute_qubit_covariance(
 class BenchmarkSuite:
     """Runs rigorous leak-free comparative cross-validation across all models."""
 
-    def __init__(self, n_qubits: int = 6, random_state: int = 42):
+    def __init__(self, n_qubits: int = 6, random_state: int = 42, vqc_epochs: int = 20):
         self.n_qubits = n_qubits
         self.random_state = random_state
+        self.vqc_epochs = vqc_epochs
 
     def run_benchmark(
         self,
@@ -188,7 +189,11 @@ class BenchmarkSuite:
         # VQC
         t0 = time.time()
         vqc = VariationalQuantumClassifier(
-            n_qubits=self.n_qubits, n_layers=2, feature_map_type="BioZZ", epochs=20, covariance_matrix=cov_matrix
+            n_qubits=self.n_qubits,
+            n_layers=2,
+            feature_map_type="BioZZ",
+            epochs=self.vqc_epochs,
+            covariance_matrix=cov_matrix
         )
         vqc.fit(X_tr_q, y_train)
         t_train_vqc = time.time() - t0

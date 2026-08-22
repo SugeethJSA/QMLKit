@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-import os
+from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 import numpy as np
-import pandas as pd
 
 from qmlkit.config import QMLKitAppConfig
 from qmlkit.data.biomimetic_voc_generator import BiomimeticVOCGenerator
 from qmlkit.data.feature_selector import QuantumFeatureSelector
 from qmlkit.data.preprocessor import BiomedicalDataPipeline
+from qmlkit.evaluation.benchmark_suite import compute_qubit_covariance
 from qmlkit.explainability.biomarker_mapper import BiomarkerAttributionEngine
-from qmlkit.explainability.quantum_shap import QuantumKernelSHAP
 from qmlkit.quantum.qsvm import QSVMClassifier
+from sklearn.model_selection import train_test_split
 
 
 # Pydantic Request Schemas
@@ -39,18 +39,13 @@ class BenchmarkRequest(BaseModel):
 
 def create_app() -> FastAPI:
     """Factory creating configured FastAPI instance."""
-    app = FastAPI(
-        title="QMLKit Clinical Screening API",
-        description="Hybrid Quantum Machine Learning Platform for Early Cancer Detection via Canine Olfactory VOC Sensing",
-        version="0.1.0"
-    )
-
     # In-memory cached model state for rapid inference
     app_state: Dict[str, Any] = {
         "pipeline": None,
         "selector": None,
         "qsvm_model": None,
         "explainer_engine": None,
+        "shap_explainer": None,
         "demo_samples": None,
         "is_ready": False
     }
@@ -60,42 +55,70 @@ def create_app() -> FastAPI:
             return
         generator = BiomimeticVOCGenerator(random_state=42)
         cohort = generator.generate_cohort(samples_per_class=60, cancer_types=["Healthy", "Lung_Cancer"])
-        
-        
+
         y = cohort.metadata["label_binary"].values
-        pipeline = BiomedicalDataPipeline(scaler_type="standard").fit(cohort.df_features)
-        X_scaled = pipeline.transform(cohort.df_features)
 
-        selector = QuantumFeatureSelector(n_qubits=6, method="pca").fit(X_scaled)
-        X_q = selector.transform(X_scaled)
+        # Strict leak-free partition: scalers/selector/kernel see TRAIN only.
+        idx_train, idx_test = train_test_split(
+            np.arange(len(y)), test_size=0.2, stratify=y, random_state=42
+        )
+        df_train = cohort.df_features.iloc[idx_train]
+        df_test = cohort.df_features.iloc[idx_test]
+        y_train, y_test = y[idx_train], y[idx_test]
 
-        cov = np.corrcoef(X_q.T)
-        qsvm = QSVMClassifier(n_qubits=6, feature_map_type="BioZZ", covariance_matrix=cov).fit(X_q, y)
+        pipeline = BiomedicalDataPipeline(scaler_type="standard").fit(df_train)
+        X_tr_scaled = pipeline.transform(df_train)
+        X_te_scaled = pipeline.transform(df_test)
+
+        selector = QuantumFeatureSelector(n_qubits=6, method="pca").fit(X_tr_scaled)
+        X_tr_q = selector.transform(X_tr_scaled)
+        X_te_q = selector.transform(X_te_scaled)
+
+        cov = compute_qubit_covariance(X_tr_scaled, selector)
+        qsvm = QSVMClassifier(n_qubits=6, feature_map_type="BioZZ", covariance_matrix=cov).fit(X_tr_q, y_train)
         attr_engine = BiomarkerAttributionEngine(feature_selector=selector)
 
-        demo_cohort = generator.generate_cohort(
-            samples_per_class=1,
-            cancer_types=["Healthy", "Lung_Cancer"]
-        )
+        # Optional Kernel-SHAP explainer (requires `pip install shap`); the
+        # predict endpoint falls back to a fast delta approximation otherwise.
+        shap_explainer = None
+        try:
+            from qmlkit.explainability.quantum_shap import QuantumKernelSHAP
+            shap_explainer = QuantumKernelSHAP(
+                lambda x: QSVMClassifier.predict_proba(qsvm, np.atleast_2d(x)),
+                background_data=X_te_q,
+                n_samples_background=16,
+            )
+        except ImportError:
+            pass
 
-        healthy_sample = demo_cohort.df_features.iloc[0].to_numpy(dtype=float).tolist()
-        lung_sample = demo_cohort.df_features.iloc[1].to_numpy(dtype=float).tolist()
-
+        # Demo presets drawn strictly from held-out test rows.
+        test_labels = list(y_test)
+        healthy_idx = test_labels.index(0) if 0 in test_labels else 0
+        lung_idx = next((i for i, v in enumerate(test_labels) if v == 1), len(test_labels) - 1)
         demo_samples = {
-            "healthy_control": healthy_sample,
-            "lung_positive": lung_sample
+            "healthy_control": df_test.iloc[healthy_idx].to_numpy(dtype=float).tolist(),
+            "lung_positive": df_test.iloc[lung_idx].to_numpy(dtype=float).tolist(),
         }
 
         app_state["pipeline"] = pipeline
         app_state["selector"] = selector
         app_state["qsvm_model"] = qsvm
         app_state["explainer_engine"] = attr_engine
+        app_state["shap_explainer"] = shap_explainer
         app_state["is_ready"] = True
         app_state["demo_samples"] = demo_samples
 
-    @app.on_event("startup")
-    async def startup_event():
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
         _ensure_default_models()
+        yield
+
+    app = FastAPI(
+        title="QMLKit Clinical Screening API",
+        description="Hybrid Quantum Machine Learning Platform for Early Cancer Detection via Canine Olfactory VOC Sensing",
+        version="0.1.0",
+        lifespan=lifespan
+    )
 
     @app.get("/api/v1/health")
     async def health_check():
@@ -126,7 +149,7 @@ def create_app() -> FastAPI:
     
 
     @app.post("/api/v1/predict")
-    async def predict_sample(req: PredictionRequest):
+    async def predict_sample(req: PredictionRequest, deep_explain: bool = False):
         _ensure_default_models()
         if len(req.sensor_readings) != 64:
             raise HTTPException(status_code=400, detail="Must provide exactly 64 sensor features (16 sensors x 4 features).")
@@ -138,12 +161,21 @@ def create_app() -> FastAPI:
         prob_pos = float(app_state["qsvm_model"].predict_proba(q_feat)[0, 1])
         pred_label = "Malignant / High Risk" if prob_pos >= 0.5 else "Healthy / Low Risk"
 
-        # Generate lightweight feature attribution
-        latent_delta = q_feat[0] - np.mean(q_feat)
+        # Attribution: exact Kernel-SHAP on demand (`deep_explain=true`, slower),
+        # otherwise a fast mean-delta approximation for low-latency screening.
+        latent_shap = None
+        if deep_explain and app_state["shap_explainer"] is not None:
+            try:
+                latent_shap = app_state["shap_explainer"].explain(q_feat, n_evals=48)[0]
+            except Exception:
+                latent_shap = None
+        if latent_shap is None:
+            latent_shap = q_feat[0] - np.mean(q_feat)
+
         explanation = app_state["explainer_engine"].generate_explanation(
             sample_id=req.sample_id,
             cancer_probability=prob_pos,
-            latent_shap=latent_delta,
+            latent_shap=latent_shap,
             patient_metadata={"age": req.patient_age, "smoking": req.smoking_status}
         )
 

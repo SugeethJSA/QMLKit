@@ -1,0 +1,7 @@
+metric,value
+recordings,1123.0
+dogs,40.0
+hr_mean_bpm_median,62.59
+hr_min_bpm_min,0.62
+bradycardia_recordings,1063.0
+bad_ecg_fraction_gt_50pct,149.0
