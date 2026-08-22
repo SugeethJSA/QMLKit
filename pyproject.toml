@@ -44,6 +44,22 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["frontend", "docs"]
+
+[tool.ruff.lint]
+# Pragmatic baseline: real errors (E), pyflakes (F), import hygiene (I),
+# bug-prone patterns (B). Typing-modernization (UP) and style families
+# tracked separately - not blocking CI yet.
+select = ["E4", "E7", "E9", "F", "I", "B"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+# Demo scripts keep print-style formatting; tests may re-import fixtures.
+"scripts/*" = ["F541"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

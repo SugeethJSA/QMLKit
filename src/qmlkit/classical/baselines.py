@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict
+
 import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
-import torch
-import torch.nn as nn
-import torch.optim as optim
 
 try:
     from xgboost import XGBClassifier

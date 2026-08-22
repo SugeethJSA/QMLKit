@@ -19,7 +19,7 @@ from qmlkit.hardware.kennel_streaming import (
     SimulatedKennelSource,
     frame_to_json,
 )
-from qmlkit.hardware.protocol import KennelFrame, parse_frame
+from qmlkit.hardware.protocol import parse_frame
 from qmlkit.hardware.session_recording import RecordingError, RecordingManager
 
 VALID_FRAME = {

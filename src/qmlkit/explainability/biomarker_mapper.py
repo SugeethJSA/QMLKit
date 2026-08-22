@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
+
 import numpy as np
 
 from qmlkit.config import VOCBiomarkerConfig
@@ -114,7 +115,7 @@ class BiomarkerAttributionEngine:
 
         pathways = {
             name: round((block / total_pos) * 100, 1)
-            for name, block in zip(pathway_names, block_sums)
+            for name, block in zip(pathway_names, block_sums, strict=True)
         }
 
         # Rank individual top biomarkers

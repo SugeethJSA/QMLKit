@@ -1,0 +1,8 @@
+source: markdown
+voc_task: cancer_vs_control
+n_total: 120
+n_train: 96
+n_test: 24
+class_counts: {'0': 60, '1': 60}
+n_qubits: 6
+seed: 42

@@ -1,7 +1,6 @@
 """Unit tests for Quantum Explainability and VOC Biomarker Attribution."""
 
 import numpy as np
-import pytest
 
 from qmlkit.data.feature_selector import QuantumFeatureSelector
 from qmlkit.explainability.biomarker_mapper import BiomarkerAttributionEngine

@@ -8,7 +8,8 @@ sensor array simulating dynamic Langmuir adsorption kinetics with noise and drif
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
+
 import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter

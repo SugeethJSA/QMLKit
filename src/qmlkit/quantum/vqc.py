@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import pickle
-from typing import List, Literal, Optional, Tuple
+from typing import List, Literal, Optional
+
 import numpy as np
-from pennylane import numpy as pnp # Basically another object, for pennylane to be able to differentiate properly
 import pennylane as qml
 import torch
 import torch.nn as nn
+from pennylane import numpy as pnp  # Basically another object, for pennylane to be able to differentiate properly
 
 from qmlkit.quantum.feature_maps import get_feature_map
 
@@ -107,7 +108,7 @@ class VariationalQuantumClassifier:
         batch_size = min(32, len(X_train))
         n_batches = int(np.ceil(len(X_train) / batch_size))
 
-        for epoch in range(self.epochs):
+        for _epoch in range(self.epochs):
             indices = batch_rng.permutation(len(X_train))
             epoch_losses = []
 
@@ -116,7 +117,9 @@ class VariationalQuantumClassifier:
                 x_b, y_b = X_train[batch_idx], y_signed[batch_idx]
 
                 (weights_var, bias_var), loss = opt.step_and_cost(
-                    lambda w, b: cost_fn(w, b, x_b, y_b), weights_var, bias_var
+                    lambda w, bb, xb=x_b, yb=y_b: cost_fn(w, bb, xb, yb),
+                    weights_var,
+                    bias_var,
                 )
                 epoch_losses.append(loss)
 

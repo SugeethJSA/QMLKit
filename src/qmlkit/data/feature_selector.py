@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import pickle
 from typing import Literal, Optional, Tuple
+
 import numpy as np
-from sklearn.decomposition import KernelPCA, PCA
-from sklearn.feature_selection import mutual_info_classif
 import torch
 import torch.nn as nn
+from sklearn.decomposition import PCA, KernelPCA
+from sklearn.feature_selection import mutual_info_classif
 
 
 class LatentAutoencoder(nn.Module):

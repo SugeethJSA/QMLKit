@@ -1,12 +1,11 @@
 """Unit tests for biomimetic VOC generator and leak-free preprocessing pipeline."""
 
 import numpy as np
-import pandas as pd
-import pytest
 
 from qmlkit.data.biomimetic_voc_generator import BiomimeticVOCGenerator
 from qmlkit.data.feature_selector import QuantumFeatureSelector
 from qmlkit.data.preprocessor import BiomedicalDataPipeline
+
 
 def test_selector_same_for_single_and_batch():
     rng = np.random.default_rng(42)

@@ -3,6 +3,7 @@
 import argparse
 import os
 import sys
+
 import numpy as np
 
 if hasattr(sys.stdout, "reconfigure"):

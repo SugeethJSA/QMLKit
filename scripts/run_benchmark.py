@@ -130,7 +130,7 @@ def main():
         "n_total": int(len(y)),
         "n_train": int(len(y_train)),
         "n_test": int(len(y_test)),
-        "class_counts": {str(k): int(v) for k, v in zip(*np.unique(y, return_counts=True))},
+        "class_counts": {str(k): int(v) for k, v in zip(*np.unique(y, return_counts=True), strict=True)},
         "n_qubits": args.n_qubits,
         "seed": args.seed,
     }

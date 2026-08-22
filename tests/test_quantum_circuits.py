@@ -1,9 +1,8 @@
 """Unit tests for Quantum Circuits, Feature Maps, QSVM, and VQC."""
 
 import numpy as np
-import pytest
 
-from qmlkit.quantum.feature_maps import BioZZFeatureMap, PauliZZFeatureMap, AngleFeatureMap
+from qmlkit.quantum.feature_maps import BioZZFeatureMap
 from qmlkit.quantum.qsvm import QSVMClassifier, QuantumKernel
 from qmlkit.quantum.vqc import VariationalQuantumClassifier
 

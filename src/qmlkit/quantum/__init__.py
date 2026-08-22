@@ -6,10 +6,10 @@ from qmlkit.quantum.feature_maps import (
     CovarianceFeatureMap,
     PauliZZFeatureMap,
 )
-from qmlkit.quantum.qsvm import QSVMClassifier, QuantumKernel
-from qmlkit.quantum.vqc import VariationalQuantumClassifier, TorchVQC
 from qmlkit.quantum.qcnn import QuantumConvolutionalClassifier
 from qmlkit.quantum.qrc import QuantumReservoirClassifier
+from qmlkit.quantum.qsvm import QSVMClassifier, QuantumKernel
+from qmlkit.quantum.vqc import TorchVQC, VariationalQuantumClassifier
 
 __all__ = [
     "AngleFeatureMap",

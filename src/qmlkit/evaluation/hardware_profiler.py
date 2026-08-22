@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Dict, List, Optional
-import numpy as np
-import pennylane as qml
 
-from qmlkit.quantum.feature_maps import BioZZFeatureMap, get_feature_map
+import numpy as np
 
 
 @dataclass

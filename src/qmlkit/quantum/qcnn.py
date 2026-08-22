@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pickle
 from typing import List, Optional
+
 import numpy as np
 import pennylane as qml
 
@@ -122,7 +123,9 @@ class QuantumConvolutionalClassifier:
                 batch_idx = indices[b * batch_size : (b + 1) * batch_size]
                 x_b, y_b = X_train[batch_idx], y_signed[batch_idx]
 
-                weights_var, loss = opt.step_and_cost(lambda w: cost_fn(w, x_b, y_b), weights_var)
+                weights_var, loss = opt.step_and_cost(
+                    lambda w, xb=x_b, yb=y_b: cost_fn(w, xb, yb), weights_var
+                )
                 epoch_losses.append(loss)
 
             self.loss_history.append(float(np.mean(epoch_losses)))

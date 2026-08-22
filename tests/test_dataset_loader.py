@@ -72,14 +72,14 @@ class TestLungVocLoader:
 
     def test_real_bundled_dataset_loads(self):
         loaded = load_lung_voc_dataset()
-        counts = dict(zip(*np.unique(loaded.y, return_counts=True)))
+        counts = dict(zip(*np.unique(loaded.y, return_counts=True), strict=True))
         assert loaded.df_features.shape[1] == 27
         assert set(counts) == {0, 1}
         assert sum(counts.values()) == 350  # 193 Control + 157 Cancer (Benign dropped)
 
     def test_disease_vs_control_pools_benign(self):
         loaded = load_lung_voc_dataset(task="disease_vs_control")
-        counts = dict(zip(*np.unique(loaded.y, return_counts=True)))
+        counts = dict(zip(*np.unique(loaded.y, return_counts=True), strict=True))
         assert len(loaded.y) == 427
         assert counts[0] == 193 and counts[1] == 234
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pickle
-from typing import List, Optional
+
 import numpy as np
 import pennylane as qml
 from sklearn.linear_model import RidgeClassifier

@@ -1,7 +1,6 @@
 """Unit tests for classical baseline models and metric evaluation functions."""
 
 import numpy as np
-import pytest
 
 from qmlkit.classical.baselines import Temporal1DCNN, get_all_classical_baselines
 from qmlkit.evaluation.benchmark_suite import compute_clinical_metrics
@@ -13,7 +12,7 @@ def test_classical_baselines_execution():
     X_test = np.random.randn(6, 10)
 
     baselines = get_all_classical_baselines(random_state=42)
-    for name, model in baselines.items():
+    for _name, model in baselines.items():
         model.fit(X_train, y_train)
         preds = model.predict(X_test)
         assert len(preds) == 6

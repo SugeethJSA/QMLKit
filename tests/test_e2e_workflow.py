@@ -1,7 +1,6 @@
 """End-to-end integration and API tests for QMLKit."""
 
 import numpy as np
-import pytest
 from fastapi.testclient import TestClient
 
 from qmlkit.api.server import create_app

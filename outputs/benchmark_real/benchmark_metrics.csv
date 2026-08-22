@@ -1,0 +1,8 @@
+model_name,paradigm,accuracy,balanced_accuracy,sensitivity_recall,specificity,precision_ppv,negative_predictive_val,f1_macro,f1_weighted,roc_auc,brier_score,train_time_sec,inference_time_ms
+XGBoost,Classical,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.0103,0.13,0.09
+MLP_NeuralNet,Classical,0.9583,0.9583,0.9167,1.0,1.0,0.9231,0.9583,0.9583,1.0,0.0204,0.157,0.02
+Random_Forest,Classical,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.0406,0.125,0.6
+SVM_Linear,Classical,0.9583,0.9583,0.9167,1.0,1.0,0.9231,0.9583,0.9583,0.9792,0.061,0.002,0.01
+SVM_RBF,Classical,0.9167,0.9167,0.9167,0.9167,0.9167,0.9167,0.9167,0.9167,0.9722,0.0738,0.002,0.02
+VQC_StronglyEntangled,Quantum,0.6667,0.6667,0.5,0.8333,0.75,0.625,0.6571,0.6571,0.625,0.2445,343.521,24.82
+QSVM_BioZZ,Quantum,0.5417,0.5417,0.4167,0.6667,0.5556,0.5333,0.5344,0.5344,0.5069,0.2504,0.739,76.7

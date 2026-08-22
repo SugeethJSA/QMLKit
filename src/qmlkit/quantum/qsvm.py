@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import pickle
-from typing import Optional, Tuple
+from typing import Optional
+
 import numpy as np
 import pennylane as qml
 from sklearn.svm import SVC

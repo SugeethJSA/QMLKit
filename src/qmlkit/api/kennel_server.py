@@ -235,7 +235,7 @@ def create_kennel_app(settings: Optional[KennelSettings] = None) -> FastAPI:
         try:
             recorder.start(req.dog_id, req.sample_id, req.label, req.duration_s)
         except RecordingError as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         return {"status": "started", **recorder.status()}
 
     @app.post("/api/v1/kennel/stop")
@@ -243,7 +243,7 @@ def create_kennel_app(settings: Optional[KennelSettings] = None) -> FastAPI:
         try:
             path = recorder.stop_and_save()
         except RecordingError as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         return {"status": "saved", "path": str(path) if path else None}
 
     @app.websocket("/ws/stream")
@@ -267,7 +267,7 @@ def create_kennel_app(settings: Optional[KennelSettings] = None) -> FastAPI:
             manager.disconnect(socket, manager.diagnostic)
 
     @app.post("/api/v1/kennel/frame")
-    async def inject_frame(frame_data: Dict[str, Any] = Body(...)) -> dict:
+    async def inject_frame(frame_data: Dict[str, Any] = Body(...)) -> dict:  # noqa: B008 - FastAPI DI pattern
         """Testing/utility hook: push one pre-parsed frame through the queue."""
         parsed = KennelFrame(
             ts_ms=int(frame_data.get("ts_ms", 0)),

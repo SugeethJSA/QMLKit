@@ -3,20 +3,20 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
+
+import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
-import numpy as np
+from sklearn.model_selection import train_test_split
 
-from qmlkit.config import QMLKitAppConfig
 from qmlkit.data.biomimetic_voc_generator import BiomimeticVOCGenerator
 from qmlkit.data.feature_selector import QuantumFeatureSelector
 from qmlkit.data.preprocessor import BiomedicalDataPipeline
 from qmlkit.evaluation.benchmark_suite import compute_qubit_covariance
 from qmlkit.explainability.biomarker_mapper import BiomarkerAttributionEngine
 from qmlkit.quantum.qsvm import QSVMClassifier
-from sklearn.model_selection import train_test_split
 
 
 # Pydantic Request Schemas

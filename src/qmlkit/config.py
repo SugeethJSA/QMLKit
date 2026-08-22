@@ -5,9 +5,10 @@ from __future__ import annotations
 import os
 import random
 from typing import List, Literal, Optional
+
 import numpy as np
-from pydantic import BaseModel, Field
 import torch
+from pydantic import BaseModel, Field
 
 
 def set_seed(seed: int = 42) -> None:
