@@ -5,6 +5,7 @@ from __future__ import annotations
 import pickle
 from typing import List, Literal, Optional, Tuple
 import numpy as np
+from pennylane import numpy as pnp # Basically another object, for pennylane to be able to differentiate properly
 import pennylane as qml
 import torch
 import torch.nn as nn
@@ -93,13 +94,13 @@ class VariationalQuantumClassifier:
         self.loss_history = []
 
         opt = qml.AdamOptimizer(stepsize=self.learning_rate)
-        weights_var = self.weights
-        bias_var = self.bias
-
+        weights_var = pnp.array(self.weights, requires_grad=True)
+        bias_var = pnp.array(self.bias, requires_grad=True)
+        
         def cost_fn(w, b, x_batch, y_batch):
-            preds = np.array([self._qnode(x, w) + b for x in x_batch])
+            preds = pnp.stack([self._qnode(x, w) + b for x in x_batch])
             # Margin MSE loss
-            return np.mean((preds - y_batch) ** 2)
+            return pnp.mean((preds - y_batch) ** 2)
 
         batch_size = min(32, len(X_train))
         n_batches = len(X_train) // batch_size
@@ -120,7 +121,7 @@ class VariationalQuantumClassifier:
             mean_loss = float(np.mean(epoch_losses))
             self.loss_history.append(mean_loss)
 
-        self.weights = weights_var
+        self.weights = np.asarray(weights_var)
         self.bias = float(bias_var)
         self.is_fitted = True
         return self
@@ -132,7 +133,7 @@ class VariationalQuantumClassifier:
         return np.array([self._qnode(x, self.weights) + self.bias for x in X])
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
-        """Compute sigmoid-calibrated diagnostic probabilities."""
+        """Compute sigmoid-mapped screening probabilities."""
         raw = self.predict_raw(X)
         # Sigmoid mapping from expectation [-1, 1] to [0, 1]
         prob_pos = 1.0 / (1.0 + np.exp(-2.0 * raw))

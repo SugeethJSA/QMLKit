@@ -55,6 +55,9 @@ class QuantumFeatureSelector:
         self.selected_indices: Optional[np.ndarray] = None
         self.autoencoder: Optional[LatentAutoencoder] = None
 
+        self.latent_min: Optional[np.ndarray] = None
+        self.latent_max: Optional[np.ndarray] = None
+
     def fit(self, X_train: np.ndarray, y_train: Optional[np.ndarray] = None) -> QuantumFeatureSelector:
         """Fit reduction model strictly on training data."""
         n_samples, n_features = X_train.shape
@@ -71,8 +74,33 @@ class QuantumFeatureSelector:
                 raise ValueError("y_train is required for supervised mutual information selection.")
             mi_scores = mutual_info_classif(X_train, y_train, random_state=42)
             self.selected_indices = np.argsort(mi_scores)[::-1][:actual_qubits]
+
+
         elif self.method == "autoencoder":
             self._train_autoencoder(X_train, actual_qubits)
+
+        if self.method == "pca":
+            assert self.pca_model is not None
+            z_train = self.pca_model.transform(X_train)
+
+        elif self.method == "kpca":
+            assert self.kpca_model is not None
+            z_train = self.kpca_model.transform(X_train)
+
+        elif self.method == "mutual_info":
+            assert self.selected_indices is not None
+            z_train = X_train[:, self.selected_indices]
+
+        else:
+            assert self.autoencoder is not None
+            self.autoencoder.eval()
+
+            with torch.no_grad():
+                tensor_x = torch.tensor(X_train, dtype=torch.float32)
+                z_train = self.autoencoder.encoder(tensor_x).numpy()
+
+        self.latent_min = np.min(z_train, axis=0)
+        self.latent_max = np.max(z_train, axis=0)
 
         self.is_fitted = True
         return self
@@ -102,6 +130,7 @@ class QuantumFeatureSelector:
             assert self.pca_model is not None
             z = self.pca_model.transform(X)
         elif self.method == "kpca":
+
             assert self.kpca_model is not None
             z = self.kpca_model.transform(X)
         elif self.method == "mutual_info":
@@ -115,12 +144,18 @@ class QuantumFeatureSelector:
                 z = self.autoencoder.encoder(tensor_x).numpy()
 
         # Scale into bounded quantum rotation angles [angle_min, angle_max]
-        z_min, z_max = np.min(z), np.max(z)
-        if z_max > z_min:
-            z_scaled = (z - z_min) / (z_max - z_min)  # [0, 1]
-            low, high = self.angle_range
-            return low + z_scaled * (high - low)
-        return z
+        assert self.latent_min is not None
+        assert self.latent_max is not None
+
+        span = self.latent_max - self.latent_min
+        safe_span = np.where(span > 0, span, 1.0) # Fir avoiding division by 0 incase min = max somehow
+
+        z_scaled = (z - self.latent_min) / safe_span
+        z_scaled = np.clip(z_scaled, 0.0, 1.0)
+
+        low, high = self.angle_range
+
+        return low + z_scaled * (high - low)
 
     def fit_transform(self, X_train: np.ndarray, y_train: Optional[np.ndarray] = None) -> np.ndarray:
         """Fit and transform training features."""
@@ -131,12 +166,26 @@ class QuantumFeatureSelector:
         if not self.is_fitted:
             raise RuntimeError("Selector must be fitted before inverse transforming.")
 
+        assert self.latent_min is not None
+        assert self.latent_max is not None
+
+        low, high = self.angle_range
+
+        if high == low:
+            raise ValueError("angle_range must have different lower and upper bounds.")
+
+        z_scaled = (z - low) / (high - low)
+
+        z_latent = self.latent_min + z_scaled * (
+            self.latent_max - self.latent_min
+        )
+
         if self.method == "pca" and self.pca_model is not None:
-            return self.pca_model.inverse_transform(z)
+            return self.pca_model.inverse_transform(z_latent)
         elif self.method == "autoencoder" and self.autoencoder is not None:
             self.autoencoder.eval()
             with torch.no_grad():
-                tensor_z = torch.tensor(z, dtype=torch.float32)
+                tensor_z = torch.tensor(z_latent, dtype=torch.float32)
                 return self.autoencoder.decoder(tensor_z).numpy()
         else:
             raise NotImplementedError(f"Inverse transform not supported for method: {self.method}")

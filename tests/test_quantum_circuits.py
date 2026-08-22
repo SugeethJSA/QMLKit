@@ -43,14 +43,20 @@ def test_qsvm_classifier_fit_predict():
 
 
 def test_vqc_training():
-    n_qubits = 4
-    X_train = np.random.uniform(-np.pi, np.pi, size=(8, n_qubits))
-    y_train = np.array([0, 1, 0, 1, 0, 1, 0, 1])
+    vqc = VariationalQuantumClassifier(
+    n_qubits=n_qubits,
+    n_layers=1,
+    epochs=3,
+    learning_rate=0.05
+    )
 
-    vqc = VariationalQuantumClassifier(n_qubits=n_qubits, n_layers=1, epochs=3, learning_rate=0.05)
+    initial_weights = vqc._init_weights().copy()
+
     vqc.fit(X_train, y_train)
 
     assert vqc.is_fitted
     assert len(vqc.loss_history) == 3
-    preds = vqc.predict(X_train)
+    assert not np.allclose(initial_weights, vqc.weights)
+
+    preds = vqc.predict(X_test)
     assert len(preds) == 8

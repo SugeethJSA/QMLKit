@@ -8,6 +8,19 @@ from qmlkit.data.biomimetic_voc_generator import BiomimeticVOCGenerator
 from qmlkit.data.feature_selector import QuantumFeatureSelector
 from qmlkit.data.preprocessor import BiomedicalDataPipeline
 
+def test_selector_same_for_single_and_batch():
+    rng = np.random.default_rng(42)
+
+    X_train = rng.normal(size=(50, 64))
+    X_test = rng.normal(size=(10, 64))
+
+    selector = QuantumFeatureSelector(n_qubits=6, method="pca")
+    selector.fit(X_train)
+
+    single = selector.transform(X_test[:1])[0]
+    batch = selector.transform(X_test[:5])[0]
+
+    assert np.allclose(single, batch)
 
 def test_voc_generator_cohort_shapes():
     gen = BiomimeticVOCGenerator(random_state=42)
