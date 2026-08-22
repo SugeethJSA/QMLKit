@@ -12,3 +12,5 @@ build/
 logs/
 *.egg-info/
 models/*.joblib
+# Data-Lab recordings are user-generated session data (GAIT convention).
+data/kennel/
