@@ -7,7 +7,7 @@ from typing import List, Optional
 import numpy as np
 import pennylane as qml
 
-from qmlkit.quantum.feature_maps import BaseFeatureMap, BioZZFeatureMap, get_feature_map
+from qmlkit.quantum.feature_maps import get_feature_map
 
 
 class QuantumConvolutionalClassifier:
@@ -22,6 +22,8 @@ class QuantumConvolutionalClassifier:
         covariance_matrix: Optional[np.ndarray] = None,
         device_name: str = "default.qubit"
     ):
+        if n_qubits < 2:
+            raise ValueError("QCNN requires at least 2 qubits for convolution blocks.")
         self.n_qubits = n_qubits
         self.feature_map_type = feature_map_type
         self.learning_rate = learning_rate

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any, Callable, List, Optional
 import numpy as np
-import shap
 
 
 class QuantumKernelSHAP:
@@ -17,6 +16,14 @@ class QuantumKernelSHAP:
         n_samples_background: int = 25
     ):
         """Initialize Quantum Kernel SHAP explainer with a reference background subset."""
+        try:
+            import shap
+        except ImportError as exc:  # pragma: no cover - environment dependent
+            raise ImportError(
+                "QuantumKernelSHAP requires the optional 'shap' package. "
+                "Install it via `pip install shap` or `pip install qmlkit[dev]`."
+            ) from exc
+
         if len(background_data) > n_samples_background:
             indices = np.random.default_rng(42).choice(
                 len(background_data), size=n_samples_background, replace=False

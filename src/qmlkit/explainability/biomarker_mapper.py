@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import numpy as np
-import pandas as pd
 
 from qmlkit.config import VOCBiomarkerConfig
 from qmlkit.data.feature_selector import QuantumFeatureSelector
@@ -28,40 +27,60 @@ class BiomarkerAttributionEngine:
     def __init__(
         self,
         feature_selector: QuantumFeatureSelector,
-        voc_config: Optional[VOCBiomarkerConfig] = None
+        voc_config: Optional[VOCBiomarkerConfig] = None,
+        feature_names: Optional[List[str]] = None
     ):
         self.feature_selector = feature_selector
         self.voc_config = voc_config or VOCBiomarkerConfig()
         self.compounds = self.voc_config.compounds
+        # Optional names of the selector's input features. When they match the
+        # compound list one-to-one (real VOC datasets), attributions map directly.
+        self.feature_names = list(feature_names) if feature_names is not None else None
+
+    def _pool_to_compounds(self, feature_shap: np.ndarray) -> np.ndarray:
+        """Aggregate per-input-feature attributions to per-compound attributions."""
+        n_samples, n_feat = feature_shap.shape
+        n_comp = len(self.compounds)
+
+        # 1. Direct mapping when input features ARE the configured compounds.
+        if self.feature_names is not None and n_feat == n_comp and self.feature_names == list(
+            self.compounds
+        ):
+            return feature_shap
+
+        # 2. Legacy synthetic schema: 64 sensor features (16 sensors x 4 kinetics),
+        #    sensors grouped into 4 chemical-class blocks of 6 compounds each.
+        if n_feat == 64 and n_comp == 24:
+            chem_shap = np.zeros((n_samples, n_comp))
+            for c_idx in range(n_comp):
+                preferred_sensor_block = c_idx // 6
+                sensor_indices = [preferred_sensor_block + 4 * k for k in range(4)]
+                feat_indices = []
+                for s in sensor_indices:
+                    feat_indices.extend([s * 4 + f for f in range(4)])
+                chem_shap[:, c_idx] = np.mean(feature_shap[:, feat_indices], axis=1)
+            return chem_shap
+
+        # 3. Generic fallback: contiguous mean pooling of features into compounds.
+        chem_shap = np.zeros((n_samples, n_comp))
+        edges = np.linspace(0, n_feat, n_comp + 1, dtype=int)
+        for c_idx in range(n_comp):
+            lo, hi = edges[c_idx], max(edges[c_idx] + 1, edges[c_idx + 1])
+            chem_shap[:, c_idx] = np.mean(feature_shap[:, lo:hi], axis=1)
+        return chem_shap
 
     def map_latent_to_chemical(
         self,
         latent_shap_values: np.ndarray
     ) -> np.ndarray:
-        """Project latent qubit attributions back to 24 VOC chemical compounds."""
+        """Project latent qubit attributions back to VOC chemical compounds."""
         latent_vec = np.atleast_2d(latent_shap_values)
 
         if self.feature_selector.method == "pca" and self.feature_selector.pca_model is not None:
             # PCA projection: chemical_shap = latent_shap @ components_
-            # components_ is (n_components, n_sensor_features)
+            # components_ is (n_components, n_input_features)
             sensor_shap = np.dot(latent_vec, self.feature_selector.pca_model.components_)
-            # Map 64 sensor features (4 features per 16 sensors) to 24 chemical compounds
-            # Approximate through mean sensor attribution across 4 functional blocks
-            n_comp = len(self.compounds)
-            chem_shap = np.zeros((latent_vec.shape[0], n_comp))
-
-            # Group sensors into 4 classes
-            for c_idx in range(n_comp):
-                preferred_sensor_block = c_idx // 6
-                # Sensors corresponding to this block: 4 sensors (e.g. 0, 4, 8, 12)
-                sensor_indices = [preferred_sensor_block + 4 * k for k in range(4)]
-                feat_indices = []
-                for s in sensor_indices:
-                    feat_indices.extend([s * 4 + f for f in range(4)])
-
-                chem_shap[:, c_idx] = np.mean(sensor_shap[:, feat_indices], axis=1)
-
-            return chem_shap
+            return self._pool_to_compounds(sensor_shap)
         else:
             # Fallback uniform projection
             n_comp = len(self.compounds)
@@ -77,18 +96,25 @@ class BiomarkerAttributionEngine:
         """Create a human-interpretable clinical report for an oncologist."""
         chem_shap = self.map_latent_to_chemical(latent_shap)[0]
 
-        # Aggregate by biological pathway
-        aldehydes = float(np.sum(np.maximum(0, chem_shap[0:6])))
-        ketones = float(np.sum(np.maximum(0, chem_shap[6:12])))
-        aromatics = float(np.sum(np.maximum(0, chem_shap[12:18])))
-        alkanes_sulfur = float(np.sum(np.maximum(0, chem_shap[18:24])))
-        total_pos = max(1e-6, aldehydes + ketones + aromatics + alkanes_sulfur)
+        # Aggregate by biological pathway. Compounds are ordered by chemical
+        # class (see VOCBiomarkerConfig); split into four equal class blocks.
+        pathway_names = [
+            "Lipid_Peroxidation_Aldehydes",
+            "Mitochondrial_Ketone_Metabolism",
+            "Cytochrome_P450_Aromatics",
+            "Alkanes_Sulfur_Dysregulation",
+        ]
+        n_comp = len(chem_shap)
+        edges = np.linspace(0, n_comp, len(pathway_names) + 1, dtype=int)
+        block_sums = [
+            float(np.sum(np.maximum(0, chem_shap[edges[k]:max(edges[k] + 1, edges[k + 1])])))
+            for k in range(len(pathway_names))
+        ]
+        total_pos = max(1e-6, sum(block_sums))
 
         pathways = {
-            "Lipid_Peroxidation_Aldehydes": round((aldehydes / total_pos) * 100, 1),
-            "Mitochondrial_Ketone_Metabolism": round((ketones / total_pos) * 100, 1),
-            "Cytochrome_P450_Aromatics": round((aromatics / total_pos) * 100, 1),
-            "Alkanes_Sulfur_Dysregulation": round((alkanes_sulfur / total_pos) * 100, 1),
+            name: round((block / total_pos) * 100, 1)
+            for name, block in zip(pathway_names, block_sums)
         }
 
         # Rank individual top biomarkers

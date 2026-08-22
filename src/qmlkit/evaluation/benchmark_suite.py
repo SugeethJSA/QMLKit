@@ -16,7 +16,6 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import StratifiedKFold
 
 from qmlkit.classical.baselines import get_all_classical_baselines
 from qmlkit.data.feature_selector import QuantumFeatureSelector
@@ -97,6 +96,46 @@ def compute_clinical_metrics(
     )
 
 
+def compute_qubit_covariance(
+    X_scaled: np.ndarray,
+    selector: "QuantumFeatureSelector",
+    top_k: int = 3,
+) -> np.ndarray:
+    """Derive an (n_qubits x n_qubits) correlation matrix for the BioZZ feature map.
+
+    PCA latent scores are orthogonal by construction, so ``np.corrcoef`` on them
+    yields (near-)identity matrices and silently disables BioZZ entanglement.
+    Instead, correlations are measured on the *raw scaled features*:
+
+    - Raw-subset selectors (mutual_info): Pearson correlation of selected columns.
+    - PCA: weight between components i and j is the maximum absolute raw-feature
+      correlation among their top-|loading| contributing features.
+    - Fallback: identity matrix.
+    """
+    n_q = min(selector.n_qubits, X_scaled.shape[1])
+
+    if getattr(selector, "selected_indices", None) is not None:
+        sel = np.asarray(selector.selected_indices)[:n_q]
+        with np.errstate(invalid="ignore", divide="ignore"):
+            corr = np.corrcoef(X_scaled[:, sel].T)
+        return np.nan_to_num(corr[: len(sel), : len(sel)], nan=0.0)
+
+    if selector.method == "pca" and selector.pca_model is not None:
+        loadings = np.abs(selector.pca_model.components_)  # (n_components, n_features)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            raw_corr = np.corrcoef(X_scaled.T)
+        raw_corr = np.nan_to_num(raw_corr, nan=0.0)
+        cov = np.eye(n_q)
+        top_feats = [np.argsort(loadings[i])[::-1][:top_k] for i in range(n_q)]
+        for i in range(n_q):
+            for j in range(i + 1, n_q):
+                block = np.abs(raw_corr[np.ix_(top_feats[i], top_feats[j])])
+                cov[i, j] = cov[j, i] = float(block.max()) if block.size else 0.5
+        return cov
+
+    return np.eye(n_q)
+
+
 class BenchmarkSuite:
     """Runs rigorous leak-free comparative cross-validation across all models."""
 
@@ -124,8 +163,9 @@ class BenchmarkSuite:
         X_tr_q = selector.transform(X_tr_scaled)
         X_te_q = selector.transform(X_te_scaled)
 
-        # Compute empirical covariance for BioZZ Feature Map
-        cov_matrix = np.corrcoef(X_tr_q.T)
+        # Compute empirical covariance for BioZZ Feature Map from RAW feature
+        # correlations (PCA scores are orthogonal and would yield identity).
+        cov_matrix = compute_qubit_covariance(X_tr_scaled, selector)
 
         results: List[ModelEvaluationMetrics] = []
 
