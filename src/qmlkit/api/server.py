@@ -51,6 +51,7 @@ def create_app() -> FastAPI:
         "selector": None,
         "qsvm_model": None,
         "explainer_engine": None,
+        "demo_samples": None,
         "is_ready": False
     }
 
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
             return
         generator = BiomimeticVOCGenerator(random_state=42)
         cohort = generator.generate_cohort(samples_per_class=60, cancer_types=["Healthy", "Lung_Cancer"])
+        
         
         y = cohort.metadata["label_binary"].values
         pipeline = BiomedicalDataPipeline(scaler_type="standard").fit(cohort.df_features)
@@ -71,11 +73,25 @@ def create_app() -> FastAPI:
         qsvm = QSVMClassifier(n_qubits=6, feature_map_type="BioZZ", covariance_matrix=cov).fit(X_q, y)
         attr_engine = BiomarkerAttributionEngine(feature_selector=selector)
 
+        demo_cohort = generator.generate_cohort(
+            samples_per_class=1,
+            cancer_types=["Healthy", "Lung_Cancer"]
+        )
+
+        healthy_sample = demo_cohort.df_features.iloc[0].to_numpy(dtype=float).tolist()
+        lung_sample = demo_cohort.df_features.iloc[1].to_numpy(dtype=float).tolist()
+
+        demo_samples = {
+            "healthy_control": healthy_sample,
+            "lung_positive": lung_sample
+        }
+
         app_state["pipeline"] = pipeline
         app_state["selector"] = selector
         app_state["qsvm_model"] = qsvm
         app_state["explainer_engine"] = attr_engine
         app_state["is_ready"] = True
+        app_state["demo_samples"] = demo_samples
 
     @app.on_event("startup")
     async def startup_event():
@@ -89,6 +105,25 @@ def create_app() -> FastAPI:
             "models_loaded": app_state["is_ready"],
             "platform": "QMLKit PS-26139"
         }
+
+    @app.get("/api/v1/demo-sample/{preset}")
+    async def get_demo_sample(preset: str):
+        _ensure_default_models()
+
+        demo_samples = app_state["demo_samples"]
+
+        if preset not in demo_samples:
+            raise HTTPException(
+                status_code=404,
+                detail="Unknown demo sample preset."
+            )
+
+        return {
+            "preset": preset,
+            "sensor_readings": demo_samples[preset]
+        }
+
+    
 
     @app.post("/api/v1/predict")
     async def predict_sample(req: PredictionRequest):
@@ -178,9 +213,8 @@ def create_app() -> FastAPI:
                             <div class="mb-3">
                                 <label class="form-label text-secondary">Canine Biomimetic Profile Preset</label>
                                 <select id="profilePreset" class="form-select bg-dark text-white border-secondary" onchange="applyPreset()">
-                                    <option value="lung_positive">Lung Cancer Patient (Elevated Hexanal / Benzaldehyde)</option>
-                                    <option value="healthy_control">Healthy Control (Physiological Homeostasis)</option>
-                                    <option value="breast_positive">Breast Cancer Sample (Heptanal / Ketones)</option>
+                                    <option value="lung_positive">Synthetic Lung Cancer Sample</option>
+                                    <option value="healthy_control">Synthetic Healthy Control</option>
                                 </select>
                             </div>
                             <button class="btn btn-quantum w-100 py-2 mt-auto" onclick="runDiagnostic()">⚛️ Run Quantum Diagnostic</button>
