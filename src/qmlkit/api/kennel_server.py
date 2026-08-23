@@ -1,10 +1,10 @@
 """Kennel live server: telemetry streaming, recording sessions, diagnostics.
 
 FastAPI app mirroring the GAIT monorepo reference architecture:
-  - background stream source thread (ESP32 TCP or simulation fallback)
-  - thread-safe frame queue drained by a predictor worker
-  - WebSocket broadcasts: /ws/stream (raw @10 Hz), /ws/diagnostic (windows)
-  - Data-Lab recording endpoints
+- background stream source thread (ESP32 TCP or simulation fallback)
+- thread-safe frame queue drained by a predictor worker
+- WebSocket broadcasts: /ws/stream (raw @10 Hz), /ws/diagnostic (windows)
+- Data-Lab recording endpoints
 
 Run: python -m uvicorn --app-dir src qmlkit.api.kennel_server:app --port 8001
 """
@@ -105,17 +105,35 @@ class KennelPredictor:
             logger.error("Failed to load model artifact: %s", exc)
 
 
-def _predict_probability(model_bundle: Dict[str, Any], features: np.ndarray) -> Optional[float]:
-    try:
-        model = model_bundle["model"]
-        proba = model.predict_proba(features.reshape(1, -1))[0]
-        classes = list(model.classes_)
-        if 1 in classes:
-            return float(proba[classes.index(1)])
-        return float(max(proba))
-    except Exception:
-        return None
+def _predict_cancer_probability(
+        model_bundle: Dict[str, Any],
+        features: np.ndarray,
+    ) -> Optional[float]:
+        try:
+            model = model_bundle["model"]
+            proba = model.predict_proba(features.reshape(1, -1))[0]
+            classes = list(model.classes_)
 
+            cancer_class_id = model_bundle.get("positive_class_id")
+
+            if cancer_class_id is None:
+                class_names = model_bundle.get("classes", {})
+                cancer_class_id = next(
+                    (
+                        int(class_id)
+                        for class_id, label in class_names.items()
+                        if str(label).lower() == "cancer"
+                    ),
+                    None,
+                )
+
+            if cancer_class_id is None or cancer_class_id not in classes:
+                return None
+
+            return float(proba[classes.index(cancer_class_id)])
+
+        except Exception:
+            return None
 
 def create_kennel_app(settings: Optional[KennelSettings] = None) -> FastAPI:
     settings = settings or KennelSettings.from_env()
@@ -173,21 +191,21 @@ def create_kennel_app(settings: Optional[KennelSettings] = None) -> FastAPI:
                     "detail": "Collect labelled sessions and run scripts/train_kennel_model.py.",
                 }
             else:
-                proba_pos = _predict_probability(predictor.model, features)
-                if proba_pos is None:
+                proba_cancer = _predict_cancer_probability(predictor.model, features)
+                if proba_cancer is None:
                     continue
                 alpha = settings.smoothing_alpha
                 ema = (
-                    proba_pos
+                    proba_cancer
                     if app_state["ema"] is None
-                    else alpha * proba_pos + (1 - alpha) * app_state["ema"]
+                    else alpha * proba_cancer + (1 - alpha) * app_state["ema"]
                 )
                 app_state["ema"] = ema
-                confident = max(proba_pos, 1 - proba_pos) >= settings.confidence_threshold
+                confident = max(proba_cancer, 1 - proba_cancer) >= settings.confidence_threshold
                 payload = {
                     "type": "diagnostic",
                     "status": "ok" if confident else "uncertain",
-                    "probability_cancer": round(proba_pos, 4),
+                    "probability_cancer": round(proba_cancer, 4),
                     "smoothed_probability": round(float(ema), 4),
                     "confidence_threshold": settings.confidence_threshold,
                 }
@@ -429,7 +447,7 @@ def register_lab_routes(app: FastAPI) -> FastAPI:
                         "status": "done",
                         "finished_at": time.time(),
                         "result": {"run_dir": result["run_dir"],
-                                   "leaderboard": result["leaderboard"]},
+                                "leaderboard": result["leaderboard"]},
                     })
             except Exception as exc:
                 logger.exception("Lab run %s failed", job_id)

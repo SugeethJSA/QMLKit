@@ -85,6 +85,19 @@ def main() -> None:
                 dogs.append(dog)
 
     y, class_names = encode_labels(y_raw)
+
+    cancer_class_id = next(
+        (
+            int(class_id)
+            for class_id, label in class_names.items()
+            if label.lower() == "cancer"
+        ),
+        None,
+    )
+
+    if cancer_class_id is None:
+        raise SystemExit("Training data must contain a 'cancer' class.")
+
     X = np.vstack(X_rows)
     # Impute NaN features with column medians (robust to missing ultrasonic echo).
     col_median = np.nanmedian(X, axis=0)
@@ -132,6 +145,8 @@ def main() -> None:
             "model": final_model,
             "feature_names": KENNEL_FEATURE_NAMES,
             "classes": class_names,
+            "positive_class_label": "cancer",
+            "positive_class_id": cancer_class_id,
             "metrics": report,
             "manifest": {"version": "0.1.0", "window": WINDOW, "step": STEP},
         },

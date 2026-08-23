@@ -70,7 +70,13 @@ def _make_head(spec: "PipelineSpec", cov_matrix: Optional[np.ndarray]) -> Any:
     embedding_map = None if spec.embedding == "none" else spec.embedding
 
     if spec.head == "qsvm":
-        map_type = {"cwzz": "BioZZ", "cwzz_permuted": "BioZZ"}.get(embedding_map or "", "ZZ")
+        map_type = {
+            "angle": "Angle",
+            "zz": "ZZ",
+            "cwzz": "BioZZ",
+            "cwzz_permuted": "BioZZ",
+        }.get(embedding_map or "", "ZZ")
+
         return QSVMClassifier(
             n_qubits=spec.n_components,
             feature_map_type=map_type,
@@ -80,8 +86,12 @@ def _make_head(spec: "PipelineSpec", cov_matrix: Optional[np.ndarray]) -> Any:
         return VariationalQuantumClassifier(
             n_qubits=spec.n_components,
             n_layers=2,
-            feature_map_type={"cwzz": "BioZZ", "cwzz_permuted": "BioZZ"}.get(embedding_map or "", "ZZ"),
-            epochs=spec.vqc_epochs,
+            feature_map_type={
+                "angle": "Angle",
+                "zz": "ZZ",
+                "cwzz": "BioZZ",
+                "cwzz_permuted": "BioZZ",
+            }.get(embedding_map or "", "ZZ"),            epochs=spec.vqc_epochs,
             covariance_matrix=cov_matrix,
         )
     if spec.head == "qcnn":

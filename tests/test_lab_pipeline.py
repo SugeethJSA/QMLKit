@@ -194,3 +194,17 @@ def test_default_presets_complete():
     assert any("flagship" in n for n in names)
     assert any("permuted" in n for n in names)
     assert all(isinstance(make_pipeline(p), HybridPipeline) for p in presets)
+
+def test_angle_and_zz_use_different_feature_maps():
+    angle_pipe = HybridPipeline(_fast_spec(embedding="angle"))
+    zz_pipe = HybridPipeline(_fast_spec(embedding="zz"))
+
+    from qmlkit.lab.pipeline import _make_head
+
+    angle_head = _make_head(angle_pipe.spec, None)
+    zz_head = _make_head(zz_pipe.spec, None)
+
+    assert angle_head.feature_map_type == "Angle"
+    assert zz_head.feature_map_type == "ZZ"
+    assert angle_head.feature_map.name == "Angle"
+    assert zz_head.feature_map.name == "ZZ"
