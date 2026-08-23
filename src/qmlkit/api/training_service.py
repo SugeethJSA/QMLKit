@@ -1,11 +1,11 @@
-"""Training and Benchmarking Service for In-Browser Invocation."""
+﻿"""Training and Benchmarking Service for In-Browser Invocation."""
 
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Optional
+
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, Field
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
@@ -17,7 +17,6 @@ from qmlkit.data.preprocessor import BiomedicalDataPipeline
 from qmlkit.evaluation.benchmark_suite import compute_clinical_metrics, compute_qubit_covariance
 from qmlkit.evaluation.hardware_profiler import QuantumHardwareProfiler
 from qmlkit.quantum.qcnn import QuantumConvolutionalClassifier
-from qmlkit.quantum.qrc import QuantumReservoirClassifier
 from qmlkit.quantum.qsvm import QSVMClassifier
 from qmlkit.quantum.vqc import VariationalQuantumClassifier
 
@@ -134,7 +133,7 @@ def execute_training_job(req: TrainRequest) -> Dict[str, Any]:
         )
         model.fit(X_tr_q, y_train)
         t_train = time.time() - t0_train
-        loss_history = [round(float(l), 4) for l in model.loss_history]
+        loss_history = [round(float(line), 4) for line in model.loss_history]
 
         t0_infer = time.time()
         preds = model.predict(X_te_q)
@@ -161,7 +160,7 @@ def execute_training_job(req: TrainRequest) -> Dict[str, Any]:
         )
         model.fit(X_tr_q, y_train)
         t_train = time.time() - t0_train
-        loss_history = [round(float(l), 4) for l in model.loss_history]
+        loss_history = [round(float(line), 4) for line in model.loss_history]
 
         t0_infer = time.time()
         preds = model.predict(X_te_q)
@@ -193,7 +192,7 @@ def execute_training_job(req: TrainRequest) -> Dict[str, Any]:
         )
         model.fit(X_tr_qcnn, y_train)
         t_train = time.time() - t0_train
-        loss_history = [round(float(l), 4) for l in model.loss_history]
+        loss_history = [round(float(line), 4) for line in model.loss_history]
 
         t0_infer = time.time()
         preds = model.predict(X_te_qcnn)
@@ -269,3 +268,4 @@ def execute_training_job(req: TrainRequest) -> Dict[str, Any]:
             "n_qubits": req.n_qubits
         }
     }
+

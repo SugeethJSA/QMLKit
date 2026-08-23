@@ -7,7 +7,7 @@ Single source of truth used by BOTH dataset building and live serving
 
 from __future__ import annotations
 
-from typing import List, Sequence
+from typing import Dict, List, Optional, Sequence
 
 import numpy as np
 
@@ -38,7 +38,7 @@ KENNEL_FEATURE_NAMES: List[str] = (
     + ["acc_jerk_rms", "acc_dom_freq_hz", "acc_band_tremor_4_8hz", "acc_band_sniff_2_5hz", "acc_xy_corr"]
     + [f"gyr_{ax}_std" for ax in ("x", "y", "z")]
     + ["gyr_speed_rms"]
-    + ["imu_temp_mean"]
+    + ["imu_temp_mean", "hr_bpm_mean", "spo2_pct_mean"]
 )
 
 N_KENNEL_FEATURES = len(KENNEL_FEATURE_NAMES)
@@ -132,6 +132,15 @@ def extract_window_features(frames: Sequence[KennelFrame]) -> np.ndarray:
     values += [float(np.sqrt((gyr**2).mean()))]
     values += [float(temp.mean())]
 
+    hr = np.array([_safe_float(f.hr_bpm, np.nan) for f in frames], dtype=float)
+    spo2 = np.array([_safe_float(f.spo2_pct, np.nan) for f in frames], dtype=float)
+    hr_valid = hr[hr > 0]
+    spo2_valid = spo2[spo2 > 0]
+    values += [
+        float(hr_valid.mean()) if hr_valid.size else -1.0,
+        float(spo2_valid.mean()) if spo2_valid.size else -1.0,
+    ]
+
     return np.asarray(values, dtype=float)
 
 
@@ -152,6 +161,97 @@ def frames_from_dicts(rows: Sequence[dict]) -> List[KennelFrame]:
                 acc=[float(v) for v in row.get("acc", [])],
                 gyr=[float(v) for v in row.get("gyr", [])],
                 imu_temp_c=float(row.get("imu_temp_c", -1.0)),
+                hr_bpm=float(row.get("hr_bpm", -1.0)),
+                spo2_pct=float(row.get("spo2_pct", -1.0)),
             )
         )
     return frames
+
+
+# ---------------------------------------------------------------------------
+# Feature-group registry (sensor-modality ablation, manuscript §VII-D)
+# ---------------------------------------------------------------------------
+
+FEATURE_GROUPS: Dict[str, List[str]] = {
+    "pressure": (
+        [f"{n}_{s}" for n in FSR_NAMES for s in ("mean", "std")]
+        + ["total_load_mean", "total_load_std", "lr_imbalance_mean",
+           "fb_imbalance_mean", "cop_drift_std"]
+    ),
+    "proximity": (
+        [f"{n}_active_frac" for n in IR_NAMES]
+        + ["ir_transitions_total", "us_bottom_mean", "us_top_mean",
+           "us_bottom_range_std", "us_top_slope"]
+    ),
+    "motion": (
+        [f"acc_{ax}_{s}" for ax in ("x", "y", "z") for s in ("mean", "std", "rms")]
+        + ["acc_jerk_rms", "acc_dom_freq_hz", "acc_band_tremor_4_8hz",
+           "acc_band_sniff_2_5hz", "acc_xy_corr"]
+        + [f"gyr_{ax}_std" for ax in ("x", "y", "z")]
+        + ["gyr_speed_rms"]
+    ),
+    "physiology": ["imu_temp_mean", "hr_bpm_mean", "spo2_pct_mean"],
+}
+
+
+# ---------------------------------------------------------------------------
+# Trial-level extraction with baseline/exposure/post segmentation (§V-B)
+# ---------------------------------------------------------------------------
+
+DELTA_SOURCE_KEYS = [
+    # (window-feature index lookup by name) baseline-relative channels
+    "total_load_mean",
+    "us_bottom_mean",
+    "us_top_mean",
+    "acc_x_mean",
+    "acc_y_mean",
+    "acc_z_mean",
+    "acc_jerk_rms",
+    "gyr_speed_rms",
+    "acc_band_sniff_2_5hz",
+]
+
+TRIAL_FEATURE_NAMES = (
+    KENNEL_FEATURE_NAMES                      # exposure-window features
+    + [f"{k}_delta" for k in DELTA_SOURCE_KEYS]   # Δx = x_exposure - x_baseline
+    + ["post_recovery_delta"]                 # return toward baseline after exposure
+)
+
+N_TRIAL_FEATURES = len(TRIAL_FEATURE_NAMES)
+
+
+def _feature_index(name: str) -> int:
+    return KENNEL_FEATURE_NAMES.index(name)
+
+
+def extract_trial_features(
+    baseline_frames: Sequence[KennelFrame],
+    exposure_frames: Sequence[KennelFrame],
+    post_frames: Optional[Sequence[KennelFrame]] = None,
+) -> np.ndarray:
+    """Trial-level vector with baseline-relative changes (manuscript §V-B/D).
+
+    Δx = x_exposure − x_baseline for key physiological/motion/pressure channels,
+    plus a recovery indicator from the post-exposure window when available.
+    """
+    base_feats = extract_window_features(baseline_frames)
+    expo_feats = extract_window_features(exposure_frames)
+
+    deltas = []
+    for key in DELTA_SOURCE_KEYS:
+        idx = _feature_index(key)
+        deltas.append(expo_feats[idx] - base_feats[idx])
+
+    if post_frames:
+        post_feats = extract_window_features(post_frames)
+        # Recovery: how far exposure moved from baseline, relative to post movement.
+        exposure_shift = abs(expo_feats[_feature_index("total_load_mean")]
+                             - base_feats[_feature_index("total_load_mean")])
+        post_shift = abs(post_feats[_feature_index("total_load_mean")]
+                         - base_feats[_feature_index("total_load_mean")])
+        recovery = (post_shift / exposure_shift) if exposure_shift > 1e-6 else 0.0
+    else:
+        recovery = 0.0
+
+    return np.concatenate([expo_feats, np.asarray(deltas, dtype=float), [recovery]])
+

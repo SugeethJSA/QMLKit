@@ -130,8 +130,24 @@ def compute_qubit_covariance(
         top_feats = [np.argsort(loadings[i])[::-1][:top_k] for i in range(n_q)]
         for i in range(n_q):
             for j in range(i + 1, n_q):
-                block = np.abs(raw_corr[np.ix_(top_feats[i], top_feats[j])])
-                cov[i, j] = cov[j, i] = float(block.max()) if block.size else 0.5
+                # Disjoint pairs only: shared features would contribute
+                # self-correlation (=1) and degenerate the weighting.
+                set_i, set_j = set(top_feats[i]), set(top_feats[j])
+                a = np.array(sorted(set_i - set_j), dtype=int)
+                b = np.array(sorted(set_j - set_i), dtype=int)
+                if a.size and b.size:
+                    block = np.abs(raw_corr[np.ix_(a, b)])
+                    cov[i, j] = cov[j, i] = float(block.max())
+                else:
+                    # Fully overlapping loading sets -> fall back to mean |corr|
+                    # across the union's cross-block.
+                    union = np.array(sorted(set_i | set_j), dtype=int)
+                    if union.size > 1:
+                        block = np.abs(raw_corr[np.ix_(union, union)])
+                        iu = np.triu_indices(len(union), k=1)
+                        cov[i, j] = cov[j, i] = float(block[iu].mean()) if iu[0].size else 0.5
+                    else:
+                        cov[i, j] = cov[j, i] = 0.5
         return cov
 
     return np.eye(n_q)

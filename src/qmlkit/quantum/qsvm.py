@@ -7,6 +7,7 @@ from typing import Optional
 
 import numpy as np
 import pennylane as qml
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.svm import SVC
 
 from qmlkit.quantum.feature_maps import BaseFeatureMap, BioZZFeatureMap, get_feature_map
@@ -92,16 +93,30 @@ class QSVMClassifier:
             covariance_matrix=covariance_matrix
         )
         self.kernel_engine = QuantumKernel(feature_map=self.feature_map, n_qubits=n_qubits)
-        self.svc_model = SVC(C=c_param, kernel="precomputed", probability=True, random_state=42)
+        # Calibrated SVC is constructed in fit() with fold-count adaptive to the
+        # training class balance (SVC(probability=True) deprecated in sklearn 1.9).
 
         self.X_train_cached: Optional[np.ndarray] = None
         self.train_kernel_matrix: Optional[np.ndarray] = None
         self.is_fitted = False
 
+    @staticmethod
+    def _make_calibrated_svc(c_param: float, y_train: np.ndarray, max_cv: int = 5):
+        """Calibrated SVC whose internal CV adapts to the smallest class count."""
+        counts = np.bincount(np.asarray(y_train).astype(int))
+        min_class = int(counts[counts > 0].min()) if counts.size else 0
+        base = SVC(C=c_param, kernel="precomputed", random_state=42)
+        if len(counts) == 2 and min_class >= 2:
+            cv = int(max(2, min(max_cv, min_class)))
+            return CalibratedClassifierCV(base, ensemble=False, cv=cv)
+        # Degenerate class balance in this training fold - plain SVC fallback.
+        return base
+
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> QSVMClassifier:
         """Fit QSVM on training data by computing quantum kernel Gram matrix."""
         self.X_train_cached = np.copy(X_train)
         self.train_kernel_matrix = self.kernel_engine.compute_kernel_matrix(X_train)
+        self.svc_model = self._make_calibrated_svc(self.c_param, y_train)
         self.svc_model.fit(self.train_kernel_matrix, y_train)
         self.is_fitted = True
         return self

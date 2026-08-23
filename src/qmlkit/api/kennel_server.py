@@ -66,6 +66,16 @@ class StartRecordingRequest(BaseModel):
     duration_s: float = Field(default=20.0, gt=1.0, le=300.0)
 
 
+class LabRunRequest(BaseModel):
+    dataset: str = Field(default="voc_real", description="voc_real | kennel_synth")
+    experiment: str = Field(default="search", description="search | map_ablation | modality_ablation | robustness")
+    max_samples: int = Field(default=120, ge=0)
+    vqc_epochs: int = Field(default=8, ge=1, le=40)
+    n_splits: int = Field(default=5, ge=2, le=10)
+    n_components: int = Field(default=6, ge=2, le=12)
+    seed: int = Field(default=42)
+
+
 class KennelPredictor:
     """Model-artifact holder with feature-order validation."""
 
@@ -258,7 +268,7 @@ def create_kennel_app(settings: Optional[KennelSettings] = None) -> FastAPI:
             raise HTTPException(status_code=500, detail=f"Training failed: {exc}") from exc
 
     @app.post("/api/v1/benchmark/run")
-    async def run_benchmark_endpoint(req: Dict[str, Any] = Body(...)):
+    async def run_benchmark_endpoint(req: Dict[str, Any] = Body(...)):  # noqa: B008 - FastAPI DI
         """Run multi-model comparative leaderboard across Quantum and Classical models."""
         try:
             from sklearn.model_selection import train_test_split
@@ -353,4 +363,106 @@ def create_kennel_app(settings: Optional[KennelSettings] = None) -> FastAPI:
     return app
 
 
+def register_lab_routes(app: FastAPI) -> FastAPI:
+    """Attach training-lab endpoints (background-thread experiment execution)."""
+    import threading
+    import time
+    import uuid
+
+    lab_jobs: Dict[str, Dict[str, Any]] = {}
+    lab_lock = threading.Lock()
+
+    @app.post("/api/v1/lab/runs")
+    async def start_lab_run(req: LabRunRequest) -> dict:
+        job_id = uuid.uuid4().hex[:12]
+
+        def worker() -> None:
+            from qmlkit.config import set_seed
+            from qmlkit.lab.data_sources import load_lab_dataset
+            from qmlkit.lab.experiments import (
+                run_feature_map_ablation,
+                run_hybrid_search,
+                run_modality_ablation,
+                run_robustness,
+            )
+            from qmlkit.lab.pipeline import PipelineSpec
+
+            try:
+                set_seed(req.seed)
+                X, y, groups = load_lab_dataset(req.dataset, req.max_samples, req.seed)
+
+                common = dict(n_splits=req.n_splits, seed=req.seed, output_root="outputs/lab")
+
+                def progress(msg: str) -> None:
+                    with lab_lock:
+                        lab_jobs[job_id]["progress"].append(msg)
+
+                kwargs: Dict[str, Any] = dict(progress_cb=progress)
+                if req.experiment == "search":
+                    from qmlkit.lab.experiments import default_presets
+
+                    presets = default_presets(vqc_epochs=req.vqc_epochs, seed=req.seed)
+                    for p in presets:
+                        p.n_components = req.n_components
+                    result = run_hybrid_search(X, y, presets=presets, **common, **kwargs)
+                elif req.experiment == "map_ablation":
+                    result = run_feature_map_ablation(
+                        X, y, n_components=req.n_components, vqc_epochs=req.vqc_epochs, **common
+                    )
+                elif req.experiment == "modality_ablation":
+                    base = PipelineSpec(
+                        name="CWZZ-QSVM-modality", reduction="pca", embedding="cwzz",
+                        head="qsvm", n_components=req.n_components,
+                        vqc_epochs=req.vqc_epochs, seed=req.seed,
+                    )
+                    result = run_modality_ablation(X, y, groups, base_spec=base, **common)
+                else:
+                    spec = PipelineSpec(
+                        name="CWZZ-QSVM-robust", reduction="pca", embedding="cwzz",
+                        head="qsvm", n_components=req.n_components,
+                        vqc_epochs=req.vqc_epochs, seed=req.seed,
+                    )
+                    result = run_robustness(X, y, spec=spec, **common)
+
+                with lab_lock:
+                    lab_jobs[job_id].update({
+                        "status": "done",
+                        "finished_at": time.time(),
+                        "result": {"run_dir": result["run_dir"],
+                                   "leaderboard": result["leaderboard"]},
+                    })
+            except Exception as exc:
+                logger.exception("Lab run %s failed", job_id)
+                with lab_lock:
+                    lab_jobs[job_id].update({"status": "error", "error": str(exc)})
+
+        with lab_lock:
+            lab_jobs[job_id] = {
+                "job_id": job_id,
+                "status": "running",
+                "request": req.model_dump(),
+                "started_at": time.time(),
+                "progress": [],
+            }
+        threading.Thread(target=worker, daemon=True).start()
+        return {"job_id": job_id, "status": "running"}
+
+    @app.get("/api/v1/lab/runs")
+    async def list_lab_runs() -> dict:
+        with lab_lock:
+            jobs = sorted(lab_jobs.values(), key=lambda j: j["started_at"], reverse=True)
+        return {"jobs": [dict(j, progress=j["progress"][-5:]) for j in jobs]}
+
+    @app.get("/api/v1/lab/runs/{job_id}")
+    async def get_lab_run(job_id: str) -> dict:
+        with lab_lock:
+            job = lab_jobs.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="Unknown lab run.")
+        return job
+
+    return app
+
+
 app = create_kennel_app()
+app = register_lab_routes(app)

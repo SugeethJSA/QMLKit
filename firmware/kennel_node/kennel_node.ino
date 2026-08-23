@@ -29,6 +29,8 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 
+#include <SparkFun_MAX3010x_Satellite_Library.h>  // heart-rate + SpO2 (MAX30102, paper §IV-A)
+
 #include "secrets.h"
 
 
@@ -164,6 +166,19 @@ static float g_gyr[3] = {
 
 static float g_imu_temp_c = NAN;
 
+// ================================================================
+// PHYSIOLOGY (MAX30102) - paper §IV-A
+// Values stay -1.0 when the sensor is absent or no probe attached.
+// ================================================================
+
+static MAX30105 g_max30102;
+static bool g_hr_ok = false;
+static float g_hr_bpm = -1.0f;
+static float g_spo2_pct = -1.0f;
+static uint32_t g_hr_last_ms = 0;
+static const uint32_t HR_INTERVAL_MS = 500;  // physiological channel ~2 Hz
+static uint32_t g_next_hr_ms = 0;
+
 
 // ================================================================
 // RUNTIME STATE
@@ -275,6 +290,66 @@ static void readSlowChannels() {
       PIN_US_TOP_TRIG,
       PIN_US_TOP_ECHO
     );
+}
+
+
+// ================================================================
+// PHYSIOLOGY SAMPLING (MAX30102)
+// Beat-interval heart rate + empirical R-ratio SpO2 estimate.
+// ================================================================
+
+static uint32_t g_last_beat_ms = 0;
+static float g_beat_interval_ms = 0.0f;
+static float g_red_min = 1e9f, g_red_max = -1e9f;
+static float g_ir_min = 1e9f, g_ir_max = -1e9f;
+
+static void readPhysiology(uint32_t now) {
+
+  if (!g_hr_ok) {
+    return;
+  }
+
+  uint32_t ir_value = g_max30102.getIR();
+  uint32_t red_value = g_max30102.getRed();
+
+  if (ir_value < 50000) {
+    // No probe / no tissue contact.
+    g_hr_bpm = -1.0f;
+    g_spo2_pct = -1.0f;
+    g_red_min = 1e9f; g_red_max = -1e9f;
+    g_ir_min = 1e9f; g_ir_max = -1e9f;
+    return;
+  }
+
+  // Track AC envelope over the sliding window for SpO2 estimation.
+  if (red_value < g_red_min) g_red_min = (float)red_value;
+  if (red_value > g_red_max) g_red_max = (float)red_value;
+  if (ir_value < g_ir_min) g_ir_min = (float)ir_value;
+  if (ir_value > g_ir_max) g_ir_max = (float)ir_value;
+
+  if (g_max30102.checkForBeat((uint32_t)(g_max30102.getIR()))) {
+    if (g_last_beat_ms > 0) {
+      uint32_t interval = now - g_last_beat_ms;
+      if (interval >= 300 && interval <= 2000) {  // plausibility gate: 30-200 bpm
+        g_beat_interval_ms =
+          0.7f * g_beat_interval_ms + 0.3f * (float)interval;  // EMA smoothing
+        g_hr_bpm = 60000.0f / g_beat_interval_ms;
+
+        float red_ac = g_red_max - g_red_min;
+        float ir_ac = g_ir_max - g_ir_min;
+        if (red_ac > 0 && ir_ac > 0 && ir_value > 0 && red_value > 0) {
+          float r =
+            ((float)red_value / red_ac) /
+            ((float)ir_value / ir_ac);
+          g_spo2_pct =
+            constrain(110.0f - 25.0f * r, 70.0f, 100.0f);  // empirical calibration
+        }
+        g_red_min = 1e9f; g_red_max = -1e9f;
+        g_ir_min = 1e9f; g_ir_max = -1e9f;
+      }
+    }
+    g_last_beat_ms = now;
+  }
 }
 
 
@@ -554,7 +629,8 @@ static size_t buildFrame(
     "\"us\":{\"bottom\":%.1f,\"top\":%.1f},"
     "\"acc\":[%.3f,%.3f,%.3f],"
     "\"gyr\":[%.3f,%.3f,%.3f],"
-    "\"imu_temp_c\":%.1f}",
+    "\"imu_temp_c\":%.1f,"
+    "\"hr_bpm\":%.1f,\"spo2_pct\":%.1f}",
 
     (unsigned long)millis(),
 
@@ -599,7 +675,11 @@ static size_t buildFrame(
       isnan(g_imu_temp_c)
         ? -1.0
         : g_imu_temp_c
-    )
+    ),
+
+    (double)g_hr_bpm,
+
+    (double)g_spo2_pct
   );
 
   return strlen(buf);
@@ -993,6 +1073,39 @@ void setup() {
 
 
   // ---------------------------------
+  // MAX30102 heart-rate / SpO2
+  // ---------------------------------
+
+  Serial.println(
+    "Initializing MAX30102..."
+  );
+
+  g_hr_ok =
+    g_max30102.begin(Wire, I2C_SPEED_FAST);
+
+  if (g_hr_ok) {
+
+    Serial.println(
+      "MAX30102 detected."
+    );
+
+    g_max30102.setup(
+      60,   // LED brightness
+      4,    // sample average
+      2,    // led mode (SpO2)
+      100,  // sample rate
+      411,  // pulse width
+      4096  // adc range
+    );
+  } else {
+
+    Serial.println(
+      "WARNING: MAX30102 NOT detected - hr_bpm/spo2_pct will be -1."
+    );
+  }
+
+
+  // ---------------------------------
   // WiFi
   // ---------------------------------
 
@@ -1171,6 +1284,21 @@ void loop() {
 
     g_next_slow_ms =
       now + SLOW_INTERVAL_MS;
+  }
+
+
+  // ---------------------------------
+  // Physiology (heart-rate / SpO2)
+  // ---------------------------------
+
+  if (
+    now >= g_next_hr_ms
+  ) {
+
+    readPhysiology(now);
+
+    g_next_hr_ms =
+      now + HR_INTERVAL_MS;
   }
 
 

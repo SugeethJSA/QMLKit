@@ -38,6 +38,9 @@ class KennelFrame:
     acc: List[float] = field(default_factory=lambda: [0.0] * 3)
     gyr: List[float] = field(default_factory=lambda: [0.0] * 3)
     imu_temp_c: float = -1.0
+    # Physiology (firmware v2, MAX30102); -1 = unavailable.
+    hr_bpm: float = -1.0
+    spo2_pct: float = -1.0
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -50,6 +53,8 @@ class KennelFrame:
             "acc": list(self.acc),
             "gyr": list(self.gyr),
             "imu_temp_c": self.imu_temp_c,
+            "hr_bpm": self.hr_bpm,
+            "spo2_pct": self.spo2_pct,
         }
 
 
@@ -88,6 +93,9 @@ def parse_frame(payload: Union[str, bytes, Dict[str, Any]]) -> Optional[KennelFr
             acc=acc,
             gyr=gyr,
             imu_temp_c=float(data.get("imu_temp_c", -1.0)),
+            # Firmware v2 physiological channels (optional).
+            hr_bpm=float(data.get("hr_bpm", -1.0)),
+            spo2_pct=float(data.get("spo2_pct", -1.0)),
         )
     except (TypeError, ValueError, AttributeError):
         return None

@@ -1,4 +1,4 @@
-"""Quantum Convolutional Neural Network (QCNN) for Hierarchical Sensor Feature Extraction."""
+﻿"""Quantum Convolutional Neural Network (QCNN) for Hierarchical Sensor Feature Extraction."""
 
 from __future__ import annotations
 
@@ -64,10 +64,14 @@ class QuantumConvolutionalClassifier:
         # Total parameters: 5 for Conv1 + 2 for Pool1 + 5 for Conv2 + 2 for Pool2
         self.n_params = 14
 
-        @qml.qnode(self.device, interface="autograd", diff_method="parameter-shift")
+        @qml.qnode(self.device, interface="autograd", diff_method="backprop")
         def qcnn_qnode(inputs: np.ndarray, weights: np.ndarray):
+            # Batched calls arrive as (batch, features); transpose for the
+            # feature maps' feature-major indexing.
+            encoded = inputs if getattr(inputs, "ndim", 1) == 1 else np.transpose(inputs)
+
             # 1. State Encoding
-            self.feature_map.apply(inputs, wires=range(self.n_qubits))
+            self.feature_map.apply(encoded, wires=range(self.n_qubits))
 
             # 2. Convolution Layer 1 (on adjacent qubit pairs)
             for i in range(0, self.n_qubits, 2):
@@ -109,6 +113,7 @@ class QuantumConvolutionalClassifier:
         weights_var = self.weights
 
         def cost_fn(w, x_batch, y_batch):
+            # backprop diff: gradients flow through the simulator directly.
             preds = np.array([self._qnode(x, w) for x in x_batch])
             return np.mean((preds - y_batch) ** 2)
 

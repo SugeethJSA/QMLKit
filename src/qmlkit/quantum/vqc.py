@@ -1,4 +1,4 @@
-"""Variational Quantum Classifier (VQC) and Hybrid PyTorch Quantum Layers."""
+﻿"""Variational Quantum Classifier (VQC)."""
 
 from __future__ import annotations
 
@@ -7,8 +7,6 @@ from typing import List, Literal, Optional
 
 import numpy as np
 import pennylane as qml
-import torch
-import torch.nn as nn
 from pennylane import numpy as pnp  # Basically another object, for pennylane to be able to differentiate properly
 
 from qmlkit.quantum.feature_maps import get_feature_map
@@ -59,10 +57,14 @@ class VariationalQuantumClassifier:
 
         self.weight_shape = weight_shape
 
-        @qml.qnode(self.device, interface="autograd", diff_method="parameter-shift")
+        @qml.qnode(self.device, interface="autograd", diff_method="backprop")
         def vqc_qnode(inputs: np.ndarray, weights: np.ndarray):
+            # Batched calls arrive as (batch, features); feature maps expect
+            # feature-major indexing, so transpose before encoding.
+            encoded = inputs if getattr(inputs, "ndim", 1) == 1 else pnp.transpose(inputs)
+
             # 1. Quantum State Encoding
-            self.feature_map.apply(inputs, wires=range(self.n_qubits))
+            self.feature_map.apply(encoded, wires=range(self.n_qubits))
 
             # 2. Parameterized Variational Layers
             if self.ansatz_type == "StronglyEntangling":
@@ -101,6 +103,8 @@ class VariationalQuantumClassifier:
         batch_rng = np.random.default_rng(42)
 
         def cost_fn(w, b, x_batch, y_batch):
+            # backprop diff: gradients flow through the simulator directly,
+            # avoiding the 2x-parameter-shift circuit multiplier.
             preds = pnp.stack([self._qnode(x, w) + b for x in x_batch])
             # Margin MSE loss
             return pnp.mean((preds - y_batch) ** 2)
@@ -166,27 +170,3 @@ class VariationalQuantumClassifier:
         with open(filepath, "rb") as f:
             return pickle.load(f)
 
-
-class TorchVQC(nn.Module):
-    """PyTorch Module encapsulating a PennyLane Variational Quantum Layer."""
-
-    def __init__(self, n_qubits: int = 6, n_layers: int = 2):
-        super().__init__()
-        self.n_qubits = n_qubits
-        self.n_layers = n_layers
-        self.device = qml.device("default.qubit", wires=n_qubits)
-
-        @qml.qnode(self.device, interface="torch")
-        def circuit(inputs, weights):
-            for i in range(n_qubits):
-                qml.RY(inputs[i], wires=i)
-            qml.StronglyEntanglingLayers(weights, wires=range(n_qubits))
-            return [qml.expval(qml.PauliZ(i)) for i in range(n_qubits)]
-
-        weight_shapes = {"weights": (n_layers, n_qubits, 3)}
-        self.qlayer = qml.qnn.TorchLayer(circuit, weight_shapes)
-        self.head = nn.Linear(n_qubits, 2)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        q_out = self.qlayer(x)
-        return self.head(q_out)

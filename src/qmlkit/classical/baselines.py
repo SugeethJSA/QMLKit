@@ -9,7 +9,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 
@@ -98,19 +100,25 @@ class ClassicalBaselineSuite:
     @staticmethod
     def get_baselines(random_state: int = 42) -> Dict[str, Any]:
         """Return initialized dictionary of classical estimators."""
+        # SVC probability via calibration (SVC(probability=True) deprecated in
+        # sklearn 1.9); also yields better-behaved screening-risk scores.
+        calibrated_svm = lambda **kw: CalibratedClassifierCV(SVC(**kw), ensemble=False)  # noqa: E731
         baselines: Dict[str, Any] = {
-            "SVM_RBF": SVC(
+            "SVM_RBF": calibrated_svm(
                 kernel="rbf",
                 C=1.5,
                 gamma="scale",
-                probability=True,
-                random_state=random_state
+                random_state=random_state,
             ),
-            "SVM_Linear": SVC(
+            "SVM_Linear": calibrated_svm(
                 kernel="linear",
                 C=1.0,
-                probability=True,
-                random_state=random_state
+                random_state=random_state,
+            ),
+            "Logistic_Regression": LogisticRegression(
+                C=1.0,
+                max_iter=1000,
+                random_state=random_state,
             ),
             "Random_Forest": RandomForestClassifier(
                 n_estimators=150,
