@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import {
@@ -225,14 +225,14 @@ export default function TrainingStudio() {
                 onChange={(e) => setModelType(e.target.value)}
                 className="w-full bg-[#0b0f19] border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 focus:border-purple-500 focus:outline-none"
               >
-                <optgroup label="⚛️ Quantum Machine Learning">
+                <optgroup label="âš›ï¸ Quantum Machine Learning">
                   {MODELS.filter((m) => m.paradigm === "Quantum").map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="💻 Classical Baselines">
+                <optgroup label="ðŸ’» Classical Baselines">
                   {MODELS.filter((m) => m.paradigm === "Classical").map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name}
@@ -420,8 +420,8 @@ export default function TrainingStudio() {
                           </span>
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          Target: <strong className="text-gray-200">{trainResult.dataset_summary.target_cancer}</strong> · Train:{" "}
-                          {trainResult.dataset_summary.train_samples} samples · Test: {trainResult.dataset_summary.test_samples} samples
+                          Target: <strong className="text-gray-200">{trainResult.dataset_summary.target_cancer}</strong> Â· Train:{" "}
+                          {trainResult.dataset_summary.train_samples} samples Â· Test: {trainResult.dataset_summary.test_samples} samples
                         </p>
                       </div>
                     </div>
@@ -546,7 +546,7 @@ export default function TrainingStudio() {
                 <div className="max-w-md space-y-1">
                   <h3 className="text-base font-bold text-white">No Active Model Trained Yet</h3>
                   <p className="text-xs text-gray-400">
-                    Select an architecture on the left (e.g. <strong>QSVM BioZZ</strong> or <strong>VQC</strong>) and click <em>"Invoke Training from Browser"</em> to simulate and evaluate in real-time.
+                    Select an architecture on the left (e.g. <strong>QSVM BioZZ</strong> or <strong>VQC</strong>) and click <em>&quot;Invoke Training from Browser&quot;</em> to simulate and evaluate in real-time.
                   </p>
                 </div>
               </div>
@@ -562,7 +562,7 @@ export default function TrainingStudio() {
                       Comparative Leaderboard: Quantum vs Classical Baselines
                     </h3>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      Target: <strong className="text-gray-200">{benchmarkResult.target_cancer}</strong> · Evaluated on strictly held-out test cohort
+                      Target: <strong className="text-gray-200">{benchmarkResult.target_cancer}</strong> Â· Evaluated on strictly held-out test cohort
                     </p>
                   </div>
                 </div>
@@ -624,7 +624,7 @@ export default function TrainingStudio() {
               <div className="panel p-12 text-center flex flex-col items-center justify-center space-y-4 min-h-[450px]">
                 <BarChart3 className="w-10 h-10 text-indigo-400" />
                 <p className="text-xs text-gray-400">
-                  Click <em>"Run Multi-Model Benchmark Suite"</em> to evaluate all quantum &amp; classical models simultaneously.
+                  Click <em>&quot;Run Multi-Model Benchmark Suite&quot;</em> to evaluate all quantum &amp; classical models simultaneously.
                 </p>
               </div>
             )

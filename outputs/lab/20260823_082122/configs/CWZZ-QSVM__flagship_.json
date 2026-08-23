@@ -1,0 +1,155 @@
+{
+  "summary": {
+    "config": "CWZZ-QSVM (flagship)",
+    "n_folds": 5,
+    "accuracy_mean": 0.61668,
+    "accuracy_std": 0.14529931039065533,
+    "balanced_accuracy_mean": 0.61668,
+    "balanced_accuracy_std": 0.14529931039065533,
+    "sensitivity_recall_mean": 0.63332,
+    "sensitivity_recall_std": 0.14528210350900073,
+    "specificity_mean": 0.6,
+    "specificity_std": 0.22608749633714822,
+    "precision_ppv_mean": 0.64808,
+    "precision_ppv_std": 0.20384566122436848,
+    "negative_predictive_val_mean": 0.61846,
+    "negative_predictive_val_std": 0.14633622381351788,
+    "f1_macro_mean": 0.6123799999999999,
+    "f1_macro_std": 0.1427766003237225,
+    "roc_auc_mean": 0.65834,
+    "roc_auc_std": 0.15642451981706704,
+    "brier_score_mean": 0.2299,
+    "brier_score_std": 0.018579881592733577,
+    "train_time_s_mean": 2.5480698585510253
+  },
+  "details": {
+    "spec": {
+      "name": "CWZZ-QSVM (flagship)",
+      "reduction": "pca",
+      "n_components": 6,
+      "embedding": "cwzz",
+      "head": "qsvm",
+      "covariance_mode": "train",
+      "vqc_epochs": 6,
+      "seed": 42
+    },
+    "folds": [
+      {
+        "fold": 0,
+        "metrics": {
+          "accuracy": 0.375,
+          "balanced_accuracy": 0.375,
+          "sensitivity_recall": 0.4167,
+          "specificity": 0.3333,
+          "precision_ppv": 0.3846,
+          "negative_predictive_val": 0.3636,
+          "f1_macro": 0.3739,
+          "f1_weighted": 0.3739,
+          "roc_auc": 0.4097,
+          "brier_score": 0.2509,
+          "train_time_sec": 2.77,
+          "inference_time_ms": 0.12
+        },
+        "train_time_s": 2.7699036598205566,
+        "infer_time_ms_per_sample": 124.19368823369344
+      },
+      {
+        "fold": 1,
+        "metrics": {
+          "accuracy": 0.7917,
+          "balanced_accuracy": 0.7917,
+          "sensitivity_recall": 0.5833,
+          "specificity": 1.0,
+          "precision_ppv": 1.0,
+          "negative_predictive_val": 0.7059,
+          "f1_macro": 0.7822,
+          "f1_weighted": 0.7822,
+          "roc_auc": 0.7431,
+          "brier_score": 0.2198,
+          "train_time_sec": 2.581,
+          "inference_time_ms": 0.13
+        },
+        "train_time_s": 2.5809848308563232,
+        "infer_time_ms_per_sample": 129.47813669840494
+      },
+      {
+        "fold": 2,
+        "metrics": {
+          "accuracy": 0.6667,
+          "balanced_accuracy": 0.6667,
+          "sensitivity_recall": 0.8333,
+          "specificity": 0.5,
+          "precision_ppv": 0.625,
+          "negative_predictive_val": 0.75,
+          "f1_macro": 0.6571,
+          "f1_weighted": 0.6571,
+          "roc_auc": 0.7847,
+          "brier_score": 0.2243,
+          "train_time_sec": 2.475,
+          "inference_time_ms": 0.15
+        },
+        "train_time_s": 2.4754865169525146,
+        "infer_time_ms_per_sample": 145.11225620905557
+      },
+      {
+        "fold": 3,
+        "metrics": {
+          "accuracy": 0.5417,
+          "balanced_accuracy": 0.5417,
+          "sensitivity_recall": 0.5833,
+          "specificity": 0.5,
+          "precision_ppv": 0.5385,
+          "negative_predictive_val": 0.5455,
+          "f1_macro": 0.5409,
+          "f1_weighted": 0.5409,
+          "roc_auc": 0.5417,
+          "brier_score": 0.2511,
+          "train_time_sec": 2.517,
+          "inference_time_ms": 0.16
+        },
+        "train_time_s": 2.5169849395751953,
+        "infer_time_ms_per_sample": 157.84666935602823
+      },
+      {
+        "fold": 4,
+        "metrics": {
+          "accuracy": 0.7083,
+          "balanced_accuracy": 0.7083,
+          "sensitivity_recall": 0.75,
+          "specificity": 0.6667,
+          "precision_ppv": 0.6923,
+          "negative_predictive_val": 0.7273,
+          "f1_macro": 0.7078,
+          "f1_weighted": 0.7078,
+          "roc_auc": 0.8125,
+          "brier_score": 0.2034,
+          "train_time_sec": 2.397,
+          "inference_time_ms": 0.14
+        },
+        "train_time_s": 2.396989345550537,
+        "infer_time_ms_per_sample": 135.41623950004578
+      }
+    ],
+    "circuit_profile": {
+      "feature_map": {
+        "n_qubits": 6,
+        "circuit_depth": 94,
+        "total_gates": 126,
+        "single_qubit_gates": 66,
+        "two_qubit_cnot_gates": 60,
+        "parameter_count": 0,
+        "nisq_compatibility_verdict": "MODERATE - Requires Error Mitigation"
+      },
+      "spec": {
+        "name": "CWZZ-QSVM (flagship)",
+        "reduction": "pca",
+        "n_components": 6,
+        "embedding": "cwzz",
+        "head": "qsvm",
+        "covariance_mode": "train",
+        "vqc_epochs": 6,
+        "seed": 42
+      }
+    }
+  }
+}

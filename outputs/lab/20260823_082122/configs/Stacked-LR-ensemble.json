@@ -1,0 +1,28 @@
+{
+  "summary": {
+    "config": "Stacked-LR-ensemble",
+    "n_folds": 5,
+    "accuracy_mean": 0.925,
+    "accuracy_std": 0.0716666728682168,
+    "balanced_accuracy_mean": 0.925,
+    "balanced_accuracy_std": 0.0716666728682168,
+    "sensitivity_recall_mean": 0.91668,
+    "sensitivity_recall_std": 0.052715174285968155,
+    "specificity_mean": 0.9333400000000001,
+    "specificity_std": 0.13332000000000002,
+    "precision_ppv_mean": 0.94666,
+    "precision_ppv_std": 0.10668000000000001,
+    "negative_predictive_val_mean": 0.91844,
+    "negative_predictive_val_std": 0.04760393261065729,
+    "f1_macro_mean": 0.92422,
+    "f1_macro_std": 0.0729088581723785,
+    "roc_auc_mean": 0.98612,
+    "roc_auc_std": 0.01810805345695665,
+    "brier_score_mean": 0.0623,
+    "brier_score_std": 0.034050139500448454,
+    "train_time_s_mean": 135.66948761940003
+  },
+  "details": {
+    "kind": "stacking"
+  }
+}

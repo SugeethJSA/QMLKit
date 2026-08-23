@@ -1,0 +1,29 @@
+{
+  "summary": {
+    "config": "CWZZ-QSVM-robust@noise=0.0,dropout=0.0",
+    "n_folds": 5,
+    "accuracy_mean": 0.575,
+    "accuracy_std": 0.15,
+    "balanced_accuracy_mean": 0.575,
+    "balanced_accuracy_std": 0.15,
+    "sensitivity_recall_mean": 0.625,
+    "sensitivity_recall_std": 0.15811388300841897,
+    "specificity_mean": 0.525,
+    "specificity_std": 0.16583123951777,
+    "precision_ppv_mean": 0.57176,
+    "precision_ppv_std": 0.1372214356432697,
+    "negative_predictive_val_mean": 0.5857,
+    "negative_predictive_val_std": 0.17791893659754152,
+    "f1_macro_mean": 0.57274,
+    "f1_macro_std": 0.1498916088378532,
+    "roc_auc_mean": 0.60312,
+    "roc_auc_std": 0.1796787956326511,
+    "brier_score_mean": 0.24372000000000002,
+    "brier_score_std": 0.021116761115284693,
+    "train_time_s_mean": 0.0
+  },
+  "details": {
+    "noise_level": 0.0,
+    "dropout_fraction": 0.0
+  }
+}

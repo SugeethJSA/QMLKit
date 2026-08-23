@@ -1,0 +1,155 @@
+{
+  "summary": {
+    "config": "CWZZ-permuted-QSVM (control)",
+    "n_folds": 5,
+    "accuracy_mean": 0.575,
+    "accuracy_std": 0.10752906583803283,
+    "balanced_accuracy_mean": 0.575,
+    "balanced_accuracy_std": 0.10752906583803283,
+    "sensitivity_recall_mean": 0.55,
+    "sensitivity_recall_std": 0.06123724356957946,
+    "specificity_mean": 0.6,
+    "specificity_std": 0.2,
+    "precision_ppv_mean": 0.60316,
+    "precision_ppv_std": 0.13700888438345887,
+    "negative_predictive_val_mean": 0.55684,
+    "negative_predictive_val_std": 0.09169012160532887,
+    "f1_macro_mean": 0.57064,
+    "f1_macro_std": 0.10739840967165203,
+    "roc_auc_mean": 0.57812,
+    "roc_auc_std": 0.14758102045994942,
+    "brier_score_mean": 0.24372,
+    "brier_score_std": 0.009648709758304478,
+    "train_time_s_mean": 10.376180410385132
+  },
+  "details": {
+    "spec": {
+      "name": "CWZZ-permuted-QSVM (control)",
+      "reduction": "pca",
+      "n_components": 6,
+      "embedding": "cwzz_permuted",
+      "head": "qsvm",
+      "covariance_mode": "train",
+      "vqc_epochs": 6,
+      "seed": 42
+    },
+    "folds": [
+      {
+        "fold": 0,
+        "metrics": {
+          "accuracy": 0.4375,
+          "balanced_accuracy": 0.4375,
+          "sensitivity_recall": 0.5,
+          "specificity": 0.375,
+          "precision_ppv": 0.4444,
+          "negative_predictive_val": 0.4286,
+          "f1_macro": 0.4353,
+          "f1_weighted": 0.4353,
+          "roc_auc": 0.3594,
+          "brier_score": 0.255,
+          "train_time_sec": 1.393,
+          "inference_time_ms": 0.12
+        },
+        "train_time_s": 1.3929758071899414,
+        "infer_time_ms_per_sample": 116.66920781135559
+      },
+      {
+        "fold": 1,
+        "metrics": {
+          "accuracy": 0.5625,
+          "balanced_accuracy": 0.5625,
+          "sensitivity_recall": 0.5,
+          "specificity": 0.625,
+          "precision_ppv": 0.5714,
+          "negative_predictive_val": 0.5556,
+          "f1_macro": 0.5608,
+          "f1_weighted": 0.5608,
+          "roc_auc": 0.5312,
+          "brier_score": 0.2486,
+          "train_time_sec": 1.537,
+          "inference_time_ms": 0.1
+        },
+        "train_time_s": 1.5374817848205566,
+        "infer_time_ms_per_sample": 100.03392398357391
+      },
+      {
+        "fold": 2,
+        "metrics": {
+          "accuracy": 0.625,
+          "balanced_accuracy": 0.625,
+          "sensitivity_recall": 0.5,
+          "specificity": 0.75,
+          "precision_ppv": 0.6667,
+          "negative_predictive_val": 0.6,
+          "f1_macro": 0.619,
+          "f1_weighted": 0.619,
+          "roc_auc": 0.7969,
+          "brier_score": 0.2284,
+          "train_time_sec": 1.393,
+          "inference_time_ms": 0.06
+        },
+        "train_time_s": 1.392897605895996,
+        "infer_time_ms_per_sample": 60.318246483802795
+      },
+      {
+        "fold": 3,
+        "metrics": {
+          "accuracy": 0.75,
+          "balanced_accuracy": 0.75,
+          "sensitivity_recall": 0.625,
+          "specificity": 0.875,
+          "precision_ppv": 0.8333,
+          "negative_predictive_val": 0.7,
+          "f1_macro": 0.746,
+          "f1_weighted": 0.746,
+          "roc_auc": 0.6719,
+          "brier_score": 0.237,
+          "train_time_sec": 0.495,
+          "inference_time_ms": 0.03
+        },
+        "train_time_s": 0.49480652809143066,
+        "infer_time_ms_per_sample": 32.82059729099274
+      },
+      {
+        "fold": 4,
+        "metrics": {
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.5,
+          "sensitivity_recall": 0.625,
+          "specificity": 0.375,
+          "precision_ppv": 0.5,
+          "negative_predictive_val": 0.5,
+          "f1_macro": 0.4921,
+          "f1_weighted": 0.4921,
+          "roc_auc": 0.5312,
+          "brier_score": 0.2496,
+          "train_time_sec": 47.063,
+          "inference_time_ms": 0.07
+        },
+        "train_time_s": 47.062740325927734,
+        "infer_time_ms_per_sample": 67.03342497348785
+      }
+    ],
+    "circuit_profile": {
+      "feature_map": {
+        "n_qubits": 6,
+        "circuit_depth": 94,
+        "total_gates": 126,
+        "single_qubit_gates": 66,
+        "two_qubit_cnot_gates": 60,
+        "parameter_count": 0,
+        "nisq_compatibility_verdict": "MODERATE - Requires Error Mitigation"
+      },
+      "spec": {
+        "name": "CWZZ-permuted-QSVM (control)",
+        "reduction": "pca",
+        "n_components": 6,
+        "embedding": "cwzz_permuted",
+        "head": "qsvm",
+        "covariance_mode": "train",
+        "vqc_epochs": 6,
+        "seed": 42
+      }
+    }
+  }
+}

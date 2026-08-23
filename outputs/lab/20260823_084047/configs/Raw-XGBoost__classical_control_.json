@@ -1,0 +1,155 @@
+{
+  "summary": {
+    "config": "Raw-XGBoost (classical control)",
+    "n_folds": 5,
+    "accuracy_mean": 0.475,
+    "accuracy_std": 0.15612494995995996,
+    "balanced_accuracy_mean": 0.475,
+    "balanced_accuracy_std": 0.15612494995995996,
+    "sensitivity_recall_mean": 0.5,
+    "sensitivity_recall_std": 0.13693063937629152,
+    "specificity_mean": 0.45,
+    "specificity_std": 0.203100960115899,
+    "precision_ppv_mean": 0.48888,
+    "precision_ppv_std": 0.15075055422783692,
+    "negative_predictive_val_mean": 0.46286000000000005,
+    "negative_predictive_val_std": 0.17086517023665182,
+    "f1_macro_mean": 0.47203999999999996,
+    "f1_macro_std": 0.1558833230336074,
+    "roc_auc_mean": 0.47187999999999997,
+    "roc_auc_std": 0.19297579537340948,
+    "brier_score_mean": 0.341,
+    "brier_score_std": 0.08829353317202795,
+    "train_time_s_mean": 0.10152606964111328
+  },
+  "details": {
+    "spec": {
+      "name": "Raw-XGBoost (classical control)",
+      "reduction": "none",
+      "n_components": 6,
+      "embedding": "none",
+      "head": "xgboost",
+      "covariance_mode": "train",
+      "vqc_epochs": 6,
+      "seed": 42
+    },
+    "folds": [
+      {
+        "fold": 0,
+        "metrics": {
+          "accuracy": 0.3125,
+          "balanced_accuracy": 0.3125,
+          "sensitivity_recall": 0.375,
+          "specificity": 0.25,
+          "precision_ppv": 0.3333,
+          "negative_predictive_val": 0.2857,
+          "f1_macro": 0.3098,
+          "f1_weighted": 0.3098,
+          "roc_auc": 0.2188,
+          "brier_score": 0.4633,
+          "train_time_sec": 0.087,
+          "inference_time_ms": 0.0
+        },
+        "train_time_s": 0.08684468269348145,
+        "infer_time_ms_per_sample": 0.07958710193634033
+      },
+      {
+        "fold": 1,
+        "metrics": {
+          "accuracy": 0.3125,
+          "balanced_accuracy": 0.3125,
+          "sensitivity_recall": 0.375,
+          "specificity": 0.25,
+          "precision_ppv": 0.3333,
+          "negative_predictive_val": 0.2857,
+          "f1_macro": 0.3098,
+          "f1_weighted": 0.3098,
+          "roc_auc": 0.3594,
+          "brier_score": 0.3911,
+          "train_time_sec": 0.126,
+          "inference_time_ms": 0.0
+        },
+        "train_time_s": 0.12643647193908691,
+        "infer_time_ms_per_sample": 0.11786818504333496
+      },
+      {
+        "fold": 2,
+        "metrics": {
+          "accuracy": 0.6875,
+          "balanced_accuracy": 0.6875,
+          "sensitivity_recall": 0.75,
+          "specificity": 0.625,
+          "precision_ppv": 0.6667,
+          "negative_predictive_val": 0.7143,
+          "f1_macro": 0.6863,
+          "f1_weighted": 0.6863,
+          "roc_auc": 0.6562,
+          "brier_score": 0.2562,
+          "train_time_sec": 0.104,
+          "inference_time_ms": 0.0
+        },
+        "train_time_s": 0.1043093204498291,
+        "infer_time_ms_per_sample": 0.08152425289154053
+      },
+      {
+        "fold": 3,
+        "metrics": {
+          "accuracy": 0.4375,
+          "balanced_accuracy": 0.4375,
+          "sensitivity_recall": 0.5,
+          "specificity": 0.375,
+          "precision_ppv": 0.4444,
+          "negative_predictive_val": 0.4286,
+          "f1_macro": 0.4353,
+          "f1_weighted": 0.4353,
+          "roc_auc": 0.3906,
+          "brier_score": 0.3696,
+          "train_time_sec": 0.088,
+          "inference_time_ms": 0.0
+        },
+        "train_time_s": 0.08765554428100586,
+        "infer_time_ms_per_sample": 0.08346140384674072
+      },
+      {
+        "fold": 4,
+        "metrics": {
+          "accuracy": 0.625,
+          "balanced_accuracy": 0.625,
+          "sensitivity_recall": 0.5,
+          "specificity": 0.75,
+          "precision_ppv": 0.6667,
+          "negative_predictive_val": 0.6,
+          "f1_macro": 0.619,
+          "f1_weighted": 0.619,
+          "roc_auc": 0.7344,
+          "brier_score": 0.2248,
+          "train_time_sec": 0.102,
+          "inference_time_ms": 0.0
+        },
+        "train_time_s": 0.10238432884216309,
+        "infer_time_ms_per_sample": 0.08092820644378662
+      }
+    ],
+    "circuit_profile": {
+      "feature_map": {
+        "n_qubits": 6,
+        "circuit_depth": 12,
+        "total_gates": 12,
+        "single_qubit_gates": 12,
+        "two_qubit_cnot_gates": 0,
+        "parameter_count": 0,
+        "nisq_compatibility_verdict": "EXCELLENT - Fully Executable on Near-Term NISQ QPUs"
+      },
+      "spec": {
+        "name": "Raw-XGBoost (classical control)",
+        "reduction": "none",
+        "n_components": 6,
+        "embedding": "none",
+        "head": "xgboost",
+        "covariance_mode": "train",
+        "vqc_epochs": 6,
+        "seed": 42
+      }
+    }
+  }
+}

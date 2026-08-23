@@ -1,0 +1,163 @@
+{
+  "summary": {
+    "config": "AE-VQC",
+    "n_folds": 5,
+    "accuracy_mean": 0.5375,
+    "accuracy_std": 0.075,
+    "balanced_accuracy_mean": 0.5375,
+    "balanced_accuracy_std": 0.075,
+    "sensitivity_recall_mean": 0.6,
+    "sensitivity_recall_std": 0.24238399287081647,
+    "specificity_mean": 0.475,
+    "specificity_std": 0.09354143466934853,
+    "precision_ppv_mean": 0.51332,
+    "precision_ppv_std": 0.06780953915195119,
+    "negative_predictive_val_mean": 0.5909,
+    "negative_predictive_val_std": 0.1309627427935136,
+    "f1_macro_mean": 0.5234,
+    "f1_macro_std": 0.06949992805751672,
+    "roc_auc_mean": 0.57812,
+    "roc_auc_std": 0.07460207503816497,
+    "brier_score_mean": 0.24504,
+    "brier_score_std": 0.0083516704915843,
+    "train_time_s_mean": 12.692595815658569
+  },
+  "details": {
+    "spec": {
+      "name": "AE-VQC",
+      "reduction": "autoencoder",
+      "n_components": 6,
+      "embedding": "cwzz",
+      "head": "vqc",
+      "covariance_mode": "train",
+      "vqc_epochs": 6,
+      "seed": 42
+    },
+    "folds": [
+      {
+        "fold": 0,
+        "metrics": {
+          "accuracy": 0.625,
+          "balanced_accuracy": 0.625,
+          "sensitivity_recall": 0.875,
+          "specificity": 0.375,
+          "precision_ppv": 0.5833,
+          "negative_predictive_val": 0.75,
+          "f1_macro": 0.6,
+          "f1_weighted": 0.6,
+          "roc_auc": 0.6406,
+          "brier_score": 0.2396,
+          "train_time_sec": 14.987,
+          "inference_time_ms": 0.01
+        },
+        "train_time_s": 14.98674750328064,
+        "infer_time_ms_per_sample": 14.541968703269958
+      },
+      {
+        "fold": 1,
+        "metrics": {
+          "accuracy": 0.625,
+          "balanced_accuracy": 0.625,
+          "sensitivity_recall": 0.875,
+          "specificity": 0.375,
+          "precision_ppv": 0.5833,
+          "negative_predictive_val": 0.75,
+          "f1_macro": 0.6,
+          "f1_weighted": 0.6,
+          "roc_auc": 0.6406,
+          "brier_score": 0.2398,
+          "train_time_sec": 13.145,
+          "inference_time_ms": 0.02
+        },
+        "train_time_s": 13.144928216934204,
+        "infer_time_ms_per_sample": 17.855361104011536
+      },
+      {
+        "fold": 2,
+        "metrics": {
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.5,
+          "sensitivity_recall": 0.5,
+          "specificity": 0.5,
+          "precision_ppv": 0.5,
+          "negative_predictive_val": 0.5,
+          "f1_macro": 0.5,
+          "f1_weighted": 0.5,
+          "roc_auc": 0.5938,
+          "brier_score": 0.2418,
+          "train_time_sec": 11.735,
+          "inference_time_ms": 0.02
+        },
+        "train_time_s": 11.735143184661865,
+        "infer_time_ms_per_sample": 18.230170011520386
+      },
+      {
+        "fold": 3,
+        "metrics": {
+          "accuracy": 0.4375,
+          "balanced_accuracy": 0.4375,
+          "sensitivity_recall": 0.25,
+          "specificity": 0.625,
+          "precision_ppv": 0.4,
+          "negative_predictive_val": 0.4545,
+          "f1_macro": 0.417,
+          "f1_weighted": 0.417,
+          "roc_auc": 0.4375,
+          "brier_score": 0.2616,
+          "train_time_sec": 11.73,
+          "inference_time_ms": 0.01
+        },
+        "train_time_s": 11.72963261604309,
+        "infer_time_ms_per_sample": 12.362003326416016
+      },
+      {
+        "fold": 4,
+        "metrics": {
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.5,
+          "sensitivity_recall": 0.5,
+          "specificity": 0.5,
+          "precision_ppv": 0.5,
+          "negative_predictive_val": 0.5,
+          "f1_macro": 0.5,
+          "f1_weighted": 0.5,
+          "roc_auc": 0.5781,
+          "brier_score": 0.2424,
+          "train_time_sec": 11.867,
+          "inference_time_ms": 0.02
+        },
+        "train_time_s": 11.866527557373047,
+        "infer_time_ms_per_sample": 16.27233624458313
+      }
+    ],
+    "circuit_profile": {
+      "feature_map": {
+        "n_qubits": 6,
+        "circuit_depth": 94,
+        "total_gates": 126,
+        "single_qubit_gates": 66,
+        "two_qubit_cnot_gates": 60,
+        "parameter_count": 0,
+        "nisq_compatibility_verdict": "MODERATE - Requires Error Mitigation"
+      },
+      "variational": {
+        "ansatz": "StronglyEntangling",
+        "n_layers": 2,
+        "parameter_count": 36,
+        "rotations": 12,
+        "cnot_gates": 12,
+        "ansatz_depth": 6
+      },
+      "spec": {
+        "name": "AE-VQC",
+        "reduction": "autoencoder",
+        "n_components": 6,
+        "embedding": "cwzz",
+        "head": "vqc",
+        "covariance_mode": "train",
+        "vqc_epochs": 6,
+        "seed": 42
+      }
+    }
+  }
+}

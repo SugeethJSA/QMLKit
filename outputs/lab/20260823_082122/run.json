@@ -1,0 +1,27 @@
+{
+  "run_id": "20260823_082122",
+  "started_at": 1787453482.613943,
+  "dataset_shape": [
+    120,
+    27
+  ],
+  "class_counts": {
+    "0": 60,
+    "1": 60
+  },
+  "n_splits": 5,
+  "seed": 42,
+  "presets": [
+    "CWZZ-QSVM (flagship)",
+    "ZZ-QSVM",
+    "Angle-QSVM",
+    "CWZZ-permuted-QSVM (control)",
+    "MI-CWZZ-QSVM",
+    "AE-VQC",
+    "Quantum-Augmented-XGB",
+    "QCNN",
+    "PCA-XGBoost (classical control)",
+    "Raw-XGBoost (classical control)"
+  ],
+  "finished_at": 1787454553.3588867
+}

@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "--dataset",
+    "kennel_synth",
+    "--experiment",
+    "robustness",
+    "--vqc-epochs",
+    "4"
+  ],
+  "dataset": "kennel_synth"
+}

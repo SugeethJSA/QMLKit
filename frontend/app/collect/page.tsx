@@ -61,7 +61,7 @@ export default function CollectPage() {
   }
 
   useEffect(() => {
-    refresh();
+    // First data paint arrives on the first interval tick.
     const id = setInterval(refresh, 1000);
     return () => clearInterval(id);
   }, []);

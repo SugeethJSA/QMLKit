@@ -1,0 +1,155 @@
+{
+  "summary": {
+    "config": "PCA-XGBoost (classical control)",
+    "n_folds": 5,
+    "accuracy_mean": 0.8666400000000001,
+    "accuracy_std": 0.04859241093010307,
+    "balanced_accuracy_mean": 0.8666400000000001,
+    "balanced_accuracy_std": 0.04859241093010307,
+    "sensitivity_recall_mean": 0.8333400000000001,
+    "sensitivity_recall_std": 0.11784641869823623,
+    "specificity_mean": 0.9,
+    "specificity_std": 0.06237877844267229,
+    "precision_ppv_mean": 0.90052,
+    "precision_ppv_std": 0.05979228712802346,
+    "negative_predictive_val_mean": 0.85562,
+    "negative_predictive_val_std": 0.08971986179213609,
+    "f1_macro_mean": 0.8654400000000001,
+    "f1_macro_std": 0.049407796955541344,
+    "roc_auc_mean": 0.9097,
+    "roc_auc_std": 0.0532621066049776,
+    "brier_score_mean": 0.10888,
+    "brier_score_std": 0.03799949473348297,
+    "train_time_s_mean": 0.1592003345489502
+  },
+  "details": {
+    "spec": {
+      "name": "PCA-XGBoost (classical control)",
+      "reduction": "pca",
+      "n_components": 6,
+      "embedding": "none",
+      "head": "xgboost",
+      "covariance_mode": "train",
+      "vqc_epochs": 6,
+      "seed": 42
+    },
+    "folds": [
+      {
+        "fold": 0,
+        "metrics": {
+          "accuracy": 0.8333,
+          "balanced_accuracy": 0.8333,
+          "sensitivity_recall": 0.75,
+          "specificity": 0.9167,
+          "precision_ppv": 0.9,
+          "negative_predictive_val": 0.7857,
+          "f1_macro": 0.8322,
+          "f1_weighted": 0.8322,
+          "roc_auc": 0.8333,
+          "brier_score": 0.149,
+          "train_time_sec": 0.165,
+          "inference_time_ms": 0.0
+        },
+        "train_time_s": 0.1649315357208252,
+        "infer_time_ms_per_sample": 0.10995070139567058
+      },
+      {
+        "fold": 1,
+        "metrics": {
+          "accuracy": 0.8333,
+          "balanced_accuracy": 0.8333,
+          "sensitivity_recall": 0.6667,
+          "specificity": 1.0,
+          "precision_ppv": 1.0,
+          "negative_predictive_val": 0.75,
+          "f1_macro": 0.8286,
+          "f1_weighted": 0.8286,
+          "roc_auc": 0.9097,
+          "brier_score": 0.1258,
+          "train_time_sec": 0.169,
+          "inference_time_ms": 0.0
+        },
+        "train_time_s": 0.16855502128601074,
+        "infer_time_ms_per_sample": 0.1367032527923584
+      },
+      {
+        "fold": 2,
+        "metrics": {
+          "accuracy": 0.8333,
+          "balanced_accuracy": 0.8333,
+          "sensitivity_recall": 0.8333,
+          "specificity": 0.8333,
+          "precision_ppv": 0.8333,
+          "negative_predictive_val": 0.8333,
+          "f1_macro": 0.8333,
+          "f1_weighted": 0.8333,
+          "roc_auc": 0.8958,
+          "brier_score": 0.1252,
+          "train_time_sec": 0.143,
+          "inference_time_ms": 0.0
+        },
+        "train_time_s": 0.14275026321411133,
+        "infer_time_ms_per_sample": 0.07638335227966309
+      },
+      {
+        "fold": 3,
+        "metrics": {
+          "accuracy": 0.875,
+          "balanced_accuracy": 0.875,
+          "sensitivity_recall": 0.9167,
+          "specificity": 0.8333,
+          "precision_ppv": 0.8462,
+          "negative_predictive_val": 0.9091,
+          "f1_macro": 0.8748,
+          "f1_weighted": 0.8748,
+          "roc_auc": 0.9097,
+          "brier_score": 0.1066,
+          "train_time_sec": 0.181,
+          "inference_time_ms": 0.0
+        },
+        "train_time_s": 0.18067598342895508,
+        "infer_time_ms_per_sample": 0.10492404301961263
+      },
+      {
+        "fold": 4,
+        "metrics": {
+          "accuracy": 0.9583,
+          "balanced_accuracy": 0.9583,
+          "sensitivity_recall": 1.0,
+          "specificity": 0.9167,
+          "precision_ppv": 0.9231,
+          "negative_predictive_val": 1.0,
+          "f1_macro": 0.9583,
+          "f1_weighted": 0.9583,
+          "roc_auc": 1.0,
+          "brier_score": 0.0378,
+          "train_time_sec": 0.139,
+          "inference_time_ms": 0.0
+        },
+        "train_time_s": 0.13908886909484863,
+        "infer_time_ms_per_sample": 0.15841921170552573
+      }
+    ],
+    "circuit_profile": {
+      "feature_map": {
+        "n_qubits": 6,
+        "circuit_depth": 12,
+        "total_gates": 12,
+        "single_qubit_gates": 12,
+        "two_qubit_cnot_gates": 0,
+        "parameter_count": 0,
+        "nisq_compatibility_verdict": "EXCELLENT - Fully Executable on Near-Term NISQ QPUs"
+      },
+      "spec": {
+        "name": "PCA-XGBoost (classical control)",
+        "reduction": "pca",
+        "n_components": 6,
+        "embedding": "none",
+        "head": "xgboost",
+        "covariance_mode": "train",
+        "vqc_epochs": 6,
+        "seed": 42
+      }
+    }
+  }
+}

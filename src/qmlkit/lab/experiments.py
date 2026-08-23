@@ -57,9 +57,9 @@ def ensemble_base_specs(vqc_epochs: int = 8, seed: int = 42) -> List[PipelineSpe
     base = dict(n_components=6, vqc_epochs=vqc_epochs, seed=seed)
     return [
         PipelineSpec(name="stack-rf", reduction="none", embedding="none", head="random_forest",
-                     n_components=32, **base),
+                     **{**base, "n_components": 32}),
         PipelineSpec(name="stack-xgb", reduction="none", embedding="none", head="xgboost",
-                     n_components=32, **base),
+                     **{**base, "n_components": 32}),
         PipelineSpec(name="stack-qsvm", reduction="pca", embedding="cwzz", head="qsvm", **base),
         PipelineSpec(name="stack-vqc", reduction="pca", embedding="cwzz", head="vqc", **base),
     ]
@@ -130,23 +130,29 @@ def run_hybrid_search(
                 return SoftVotingEnsemble(members)
             return build
 
-        folds = cross_validate_config(
-            PipelineSpec(name="SoftVote-ensemble"), X, y_arr,
-            make_pipeline_fn=soft_vote_factory(soft_specs), n_splits=n_splits, seed=seed,
-        )
-        registry.add_result(summarise_folds("SoftVote-ensemble", folds), {"kind": "soft_voting"})
+        try:
+            folds = cross_validate_config(
+                PipelineSpec(name="SoftVote-ensemble"), X, y_arr,
+                make_pipeline_fn=soft_vote_factory(soft_specs), n_splits=n_splits, seed=seed,
+            )
+            registry.add_result(summarise_folds("SoftVote-ensemble", folds), {"kind": "soft_voting"})
+        except Exception as exc:  # pragma: no cover - keep presets on ensemble failure
+            log(f"SoftVote failed: {exc}")
 
         log("Evaluating Stacked ensemble {RF, XGB, QSVM, VQC} -> LogReg ...")
         stack_spec = PipelineSpec(name="Stacked-LR-ensemble")
-        folds = cross_validate_config(
-            stack_spec, X, y_arr,
-            make_pipeline_fn=lambda _spec: StackingEnsemble(
-                ensemble_base_specs(vqc_epochs=specs[0].vqc_epochs, seed=seed),
-                make_pipeline_fn=make_pipeline, n_splits=n_splits, seed=seed,
-            ),
-            n_splits=n_splits, seed=seed,
-        )
-        registry.add_result(summarise_folds("Stacked-LR-ensemble", folds), {"kind": "stacking"})
+        try:
+            folds = cross_validate_config(
+                stack_spec, X, y_arr,
+                make_pipeline_fn=lambda _spec: StackingEnsemble(
+                    ensemble_base_specs(vqc_epochs=specs[0].vqc_epochs, seed=seed),
+                    make_pipeline_fn=make_pipeline, n_splits=n_splits, seed=seed,
+                ),
+                n_splits=n_splits, seed=seed,
+            )
+            registry.add_result(summarise_folds("Stacked-LR-ensemble", folds), {"kind": "stacking"})
+        except Exception as exc:  # pragma: no cover - keep presets on ensemble failure
+            log(f"Stacking failed: {exc}")
 
     run_dir = registry.finalise(extra_meta={
         "dataset_shape": list(np.asarray(X).shape),

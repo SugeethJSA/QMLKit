@@ -1,0 +1,155 @@
+{
+  "summary": {
+    "config": "Angle-QSVM",
+    "n_folds": 5,
+    "accuracy_mean": 0.4625,
+    "accuracy_std": 0.08477912478906585,
+    "balanced_accuracy_mean": 0.4625,
+    "balanced_accuracy_std": 0.08477912478906585,
+    "sensitivity_recall_mean": 0.55,
+    "sensitivity_recall_std": 0.15,
+    "specificity_mean": 0.375,
+    "specificity_std": 0.13693063937629152,
+    "precision_ppv_mean": 0.46428,
+    "precision_ppv_std": 0.0727239547879514,
+    "negative_predictive_val_mean": 0.44816,
+    "negative_predictive_val_std": 0.12874578983407572,
+    "f1_macro_mean": 0.4502,
+    "f1_macro_std": 0.09062889164058004,
+    "roc_auc_mean": 0.49376,
+    "roc_auc_std": 0.07030714330706375,
+    "brier_score_mean": 0.25142,
+    "brier_score_std": 0.003756274750334424,
+    "train_time_s_mean": 0.8446190834045411
+  },
+  "details": {
+    "spec": {
+      "name": "Angle-QSVM",
+      "reduction": "pca",
+      "n_components": 6,
+      "embedding": "angle",
+      "head": "qsvm",
+      "covariance_mode": "train",
+      "vqc_epochs": 6,
+      "seed": 42
+    },
+    "folds": [
+      {
+        "fold": 0,
+        "metrics": {
+          "accuracy": 0.5625,
+          "balanced_accuracy": 0.5625,
+          "sensitivity_recall": 0.625,
+          "specificity": 0.5,
+          "precision_ppv": 0.5556,
+          "negative_predictive_val": 0.5714,
+          "f1_macro": 0.5608,
+          "f1_weighted": 0.5608,
+          "roc_auc": 0.5156,
+          "brier_score": 0.2507,
+          "train_time_sec": 0.521,
+          "inference_time_ms": 0.04
+        },
+        "train_time_s": 0.5209012031555176,
+        "infer_time_ms_per_sample": 35.43773293495178
+      },
+      {
+        "fold": 1,
+        "metrics": {
+          "accuracy": 0.375,
+          "balanced_accuracy": 0.375,
+          "sensitivity_recall": 0.375,
+          "specificity": 0.375,
+          "precision_ppv": 0.375,
+          "negative_predictive_val": 0.375,
+          "f1_macro": 0.375,
+          "f1_weighted": 0.375,
+          "roc_auc": 0.5,
+          "brier_score": 0.2568,
+          "train_time_sec": 0.457,
+          "inference_time_ms": 0.03
+        },
+        "train_time_s": 0.4568185806274414,
+        "infer_time_ms_per_sample": 33.99242460727692
+      },
+      {
+        "fold": 2,
+        "metrics": {
+          "accuracy": 0.375,
+          "balanced_accuracy": 0.375,
+          "sensitivity_recall": 0.625,
+          "specificity": 0.125,
+          "precision_ppv": 0.4167,
+          "negative_predictive_val": 0.25,
+          "f1_macro": 0.3333,
+          "f1_weighted": 0.3333,
+          "roc_auc": 0.375,
+          "brier_score": 0.2535,
+          "train_time_sec": 0.504,
+          "inference_time_ms": 0.03
+        },
+        "train_time_s": 0.503739595413208,
+        "infer_time_ms_per_sample": 32.551661133766174
+      },
+      {
+        "fold": 3,
+        "metrics": {
+          "accuracy": 0.4375,
+          "balanced_accuracy": 0.4375,
+          "sensitivity_recall": 0.375,
+          "specificity": 0.5,
+          "precision_ppv": 0.4286,
+          "negative_predictive_val": 0.4444,
+          "f1_macro": 0.4353,
+          "f1_weighted": 0.4353,
+          "roc_auc": 0.4844,
+          "brier_score": 0.2507,
+          "train_time_sec": 1.178,
+          "inference_time_ms": 0.12
+        },
+        "train_time_s": 1.1784708499908447,
+        "infer_time_ms_per_sample": 117.87129938602448
+      },
+      {
+        "fold": 4,
+        "metrics": {
+          "accuracy": 0.5625,
+          "balanced_accuracy": 0.5625,
+          "sensitivity_recall": 0.75,
+          "specificity": 0.375,
+          "precision_ppv": 0.5455,
+          "negative_predictive_val": 0.6,
+          "f1_macro": 0.5466,
+          "f1_weighted": 0.5466,
+          "roc_auc": 0.5938,
+          "brier_score": 0.2454,
+          "train_time_sec": 1.563,
+          "inference_time_ms": 0.12
+        },
+        "train_time_s": 1.5631651878356934,
+        "infer_time_ms_per_sample": 116.55953526496887
+      }
+    ],
+    "circuit_profile": {
+      "feature_map": {
+        "n_qubits": 6,
+        "circuit_depth": 12,
+        "total_gates": 12,
+        "single_qubit_gates": 12,
+        "two_qubit_cnot_gates": 0,
+        "parameter_count": 0,
+        "nisq_compatibility_verdict": "EXCELLENT - Fully Executable on Near-Term NISQ QPUs"
+      },
+      "spec": {
+        "name": "Angle-QSVM",
+        "reduction": "pca",
+        "n_components": 6,
+        "embedding": "angle",
+        "head": "qsvm",
+        "covariance_mode": "train",
+        "vqc_epochs": 6,
+        "seed": 42
+      }
+    }
+  }
+}

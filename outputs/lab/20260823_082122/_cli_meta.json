@@ -1,0 +1,17 @@
+{
+  "argv": [
+    "--dataset",
+    "voc_real",
+    "--experiment",
+    "search",
+    "--max-samples",
+    "120",
+    "--vqc-epochs",
+    "6",
+    "--n-splits",
+    "5",
+    "--n-components",
+    "6"
+  ],
+  "dataset": "voc_real"
+}

@@ -1,0 +1,28 @@
+{
+  "summary": {
+    "config": "SoftVote-ensemble",
+    "n_folds": 5,
+    "accuracy_mean": 0.525,
+    "accuracy_std": 0.1920286436967152,
+    "balanced_accuracy_mean": 0.525,
+    "balanced_accuracy_std": 0.1920286436967152,
+    "sensitivity_recall_mean": 0.475,
+    "sensitivity_recall_std": 0.2,
+    "specificity_mean": 0.575,
+    "specificity_std": 0.2449489742783178,
+    "precision_ppv_mean": 0.54278,
+    "precision_ppv_std": 0.2747197146183724,
+    "negative_predictive_val_mean": 0.5146,
+    "negative_predictive_val_std": 0.16483440174914943,
+    "f1_macro_mean": 0.51774,
+    "f1_macro_std": 0.19625258826318698,
+    "roc_auc_mean": 0.51248,
+    "roc_auc_std": 0.23246243051297558,
+    "brier_score_mean": 0.26784,
+    "brier_score_std": 0.04148776205099523,
+    "train_time_s_mean": 0.6877529621124268
+  },
+  "details": {
+    "kind": "soft_voting"
+  }
+}

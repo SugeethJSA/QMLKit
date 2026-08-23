@@ -87,12 +87,23 @@ def main() -> None:
         result = run_robustness(X, y, spec=spec, **common)
 
     run_dir = Path(result["run_dir"])
-    leaderboard = pd.DataFrame(result["leaderboard"])
-    print("\n=== LEADERBOARD (by mean ROC-AUC) ===")
-    cols = [c for c in ("config", "roc_auc_mean", "roc_auc_std", "accuracy_mean",
-                        "sensitivity_recall_mean", "specificity_mean", "train_time_s_mean")
-            if c in leaderboard.columns]
-    print(leaderboard[cols].to_markdown(index=False))
+    if "leaderboard" in result:
+        leaderboard = pd.DataFrame(result["leaderboard"])
+        print("\n=== LEADERBOARD (by mean ROC-AUC) ===")
+        cols = [c for c in ("config", "roc_auc_mean", "roc_auc_std", "accuracy_mean",
+                            "sensitivity_recall_mean", "specificity_mean", "train_time_s_mean")
+                if c in leaderboard.columns]
+        print(leaderboard[cols].to_markdown(index=False))
+    else:  # robustness experiment returns per-level rows
+        leaderboard = pd.DataFrame(result.get("levels", []))
+        print("\n=== ROBUSTNESS LEVELS ===")
+        cols = [c for c in ("config", "roc_auc_mean", "roc_auc_std",
+                            "sensitivity_recall_mean", "specificity_mean")
+                if c in leaderboard.columns]
+        if not leaderboard.empty:
+            print(leaderboard[cols].to_markdown(index=False))
+        else:
+            print("(no level summaries returned)")
     print(f"\n[OK] Artifacts in {run_dir}")
     summary_path = run_dir / "leaderboard.csv"
     print(f"[OK] Leaderboard: {summary_path}")

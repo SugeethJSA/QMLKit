@@ -1,0 +1,163 @@
+{
+  "summary": {
+    "config": "Quantum-Augmented-XGB",
+    "n_folds": 5,
+    "accuracy_mean": 0.8625,
+    "accuracy_std": 0.07288689868556626,
+    "balanced_accuracy_mean": 0.8625,
+    "balanced_accuracy_std": 0.07288689868556626,
+    "sensitivity_recall_mean": 0.9,
+    "sensitivity_recall_std": 0.09354143466934853,
+    "specificity_mean": 0.825,
+    "specificity_std": 0.09999999999999999,
+    "precision_ppv_mean": 0.84254,
+    "precision_ppv_std": 0.08390212393020809,
+    "negative_predictive_val_mean": 0.8984,
+    "negative_predictive_val_std": 0.08786450933112869,
+    "f1_macro_mean": 0.86168,
+    "f1_macro_std": 0.0731089707217931,
+    "roc_auc_mean": 0.90624,
+    "roc_auc_std": 0.06011317991921573,
+    "brier_score_mean": 0.12808000000000003,
+    "brier_score_std": 0.048957548958255666,
+    "train_time_s_mean": 10.021656703948974
+  },
+  "details": {
+    "spec": {
+      "name": "Quantum-Augmented-XGB",
+      "reduction": "pca",
+      "n_components": 6,
+      "embedding": "cwzz",
+      "head": "quantum_augmented_xgb",
+      "covariance_mode": "train",
+      "vqc_epochs": 6,
+      "seed": 42
+    },
+    "folds": [
+      {
+        "fold": 0,
+        "metrics": {
+          "accuracy": 0.875,
+          "balanced_accuracy": 0.875,
+          "sensitivity_recall": 1.0,
+          "specificity": 0.75,
+          "precision_ppv": 0.8,
+          "negative_predictive_val": 1.0,
+          "f1_macro": 0.873,
+          "f1_weighted": 0.873,
+          "roc_auc": 0.8594,
+          "brier_score": 0.187,
+          "train_time_sec": 9.043,
+          "inference_time_ms": 0.01
+        },
+        "train_time_s": 9.043362855911255,
+        "infer_time_ms_per_sample": 11.81022822856903
+      },
+      {
+        "fold": 1,
+        "metrics": {
+          "accuracy": 0.8125,
+          "balanced_accuracy": 0.8125,
+          "sensitivity_recall": 0.875,
+          "specificity": 0.75,
+          "precision_ppv": 0.7778,
+          "negative_predictive_val": 0.8571,
+          "f1_macro": 0.8118,
+          "f1_weighted": 0.8118,
+          "roc_auc": 0.9375,
+          "brier_score": 0.0962,
+          "train_time_sec": 8.938,
+          "inference_time_ms": 0.01
+        },
+        "train_time_s": 8.937696695327759,
+        "infer_time_ms_per_sample": 12.437522411346436
+      },
+      {
+        "fold": 2,
+        "metrics": {
+          "accuracy": 1.0,
+          "balanced_accuracy": 1.0,
+          "sensitivity_recall": 1.0,
+          "specificity": 1.0,
+          "precision_ppv": 1.0,
+          "negative_predictive_val": 1.0,
+          "f1_macro": 1.0,
+          "f1_weighted": 1.0,
+          "roc_auc": 1.0,
+          "brier_score": 0.058,
+          "train_time_sec": 8.805,
+          "inference_time_ms": 0.01
+        },
+        "train_time_s": 8.805150270462036,
+        "infer_time_ms_per_sample": 11.412039399147034
+      },
+      {
+        "fold": 3,
+        "metrics": {
+          "accuracy": 0.8125,
+          "balanced_accuracy": 0.8125,
+          "sensitivity_recall": 0.75,
+          "specificity": 0.875,
+          "precision_ppv": 0.8571,
+          "negative_predictive_val": 0.7778,
+          "f1_macro": 0.8118,
+          "f1_weighted": 0.8118,
+          "roc_auc": 0.8281,
+          "brier_score": 0.1784,
+          "train_time_sec": 8.913,
+          "inference_time_ms": 0.01
+        },
+        "train_time_s": 8.91267991065979,
+        "infer_time_ms_per_sample": 11.902138590812683
+      },
+      {
+        "fold": 4,
+        "metrics": {
+          "accuracy": 0.8125,
+          "balanced_accuracy": 0.8125,
+          "sensitivity_recall": 0.875,
+          "specificity": 0.75,
+          "precision_ppv": 0.7778,
+          "negative_predictive_val": 0.8571,
+          "f1_macro": 0.8118,
+          "f1_weighted": 0.8118,
+          "roc_auc": 0.9062,
+          "brier_score": 0.1208,
+          "train_time_sec": 14.409,
+          "inference_time_ms": 0.05
+        },
+        "train_time_s": 14.409393787384033,
+        "infer_time_ms_per_sample": 47.99686372280121
+      }
+    ],
+    "circuit_profile": {
+      "feature_map": {
+        "n_qubits": 6,
+        "circuit_depth": 94,
+        "total_gates": 126,
+        "single_qubit_gates": 66,
+        "two_qubit_cnot_gates": 60,
+        "parameter_count": 0,
+        "nisq_compatibility_verdict": "MODERATE - Requires Error Mitigation"
+      },
+      "variational": {
+        "ansatz": "StronglyEntangling",
+        "n_layers": 2,
+        "parameter_count": 36,
+        "rotations": 12,
+        "cnot_gates": 12,
+        "ansatz_depth": 6
+      },
+      "spec": {
+        "name": "Quantum-Augmented-XGB",
+        "reduction": "pca",
+        "n_components": 6,
+        "embedding": "cwzz",
+        "head": "quantum_augmented_xgb",
+        "covariance_mode": "train",
+        "vqc_epochs": 6,
+        "seed": 42
+      }
+    }
+  }
+}

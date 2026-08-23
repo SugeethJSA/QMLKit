@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "--dataset",
+    "kennel_synth",
+    "--experiment",
+    "search",
+    "--max-samples",
+    "0",
+    "--vqc-epochs",
+    "6"
+  ],
+  "dataset": "kennel_synth"
+}
