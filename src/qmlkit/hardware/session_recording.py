@@ -104,7 +104,7 @@ class RecordingManager:
                     "us_bottom", "us_top",
                     "acc_x", "acc_y", "acc_z",
                     "gyr_x", "gyr_y", "gyr_z",
-                    "imu_temp_c", "wall_ts",
+                    "imu_temp_c", "hr_bpm", "spo2_pct", "wall_ts",
                 ]
             )
             for r in rows:
@@ -115,7 +115,7 @@ class RecordingManager:
                     + [r["us"]["bottom"], r["us"]["top"]]
                     + [float(v) for v in r["acc"]]
                     + [float(v) for v in r["gyr"]]
-                    + [r["imu_temp_c"], r["wall_ts"]]
+                    +[r["imu_temp_c"], r["hr_bpm"], r["spo2_pct"], r["wall_ts"]]
                 )
         return path
 
@@ -135,6 +135,8 @@ class RecordingManager:
                         "acc": [float(rec[k]) for k in ("acc_x", "acc_y", "acc_z")],
                         "gyr": [float(rec[k]) for k in ("gyr_x", "gyr_y", "gyr_z")],
                         "imu_temp_c": float(rec["imu_temp_c"]),
+                        "hr_bpm": float(rec.get("hr_bpm") or -1.0),
+                        "spo2_pct": float(rec.get("spo2_pct") or -1.0),
                         "us": {"bottom": float(rec["us_bottom"]), "top": float(rec["us_top"])},
                     }
                 )
