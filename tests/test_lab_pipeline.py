@@ -82,6 +82,64 @@ class TestHybridPipeline:
         record = pipe.describe()
         assert "feature_map" in record and "spec" in record
 
+    def test_quantum_kernel_xgb_head(self, toy_data):
+        X, y = toy_data
+
+        spec = _fast_spec(
+            "kernel-hybrid",
+            head="quantum_kernel_xgb",
+            embedding="cwzz",
+            n_components=3,
+            n_landmarks=6,
+        )
+
+        pipe = HybridPipeline(spec).fit(
+            X.iloc[:60],
+            y[:60],
+        )
+
+        proba = pipe.predict_proba(
+            X.iloc[60:]
+        )
+
+        assert pipe.quantum_transformer is not None
+        assert pipe.quantum_transformer.landmarks_.shape == (6, 3)
+        assert proba.shape == (30, 2)
+        assert np.isfinite(proba).all()
+
+    def test_quantum_kernel_xgb_feature_dimensions(self, toy_data):
+        X, y = toy_data
+
+        spec = _fast_spec(
+            "kernel-hybrid-dims",
+            head="quantum_kernel_xgb",
+            embedding="cwzz",
+            n_components=3,
+            n_landmarks=5,
+        )
+
+        pipe = HybridPipeline(spec).fit(
+            X.iloc[:60],
+            y[:60],
+        )
+
+        _, X_reduced = pipe.transform_input(
+            X.iloc[60:65]
+        )
+
+        quantum_features = pipe.quantum_transformer.transform(
+            X_reduced
+        )
+
+        fused = np.hstack([
+            X_reduced,
+            quantum_features,
+        ])
+
+        assert X_reduced.shape == (5, 3)
+        assert quantum_features.shape == (5, 5)
+        assert fused.shape == (5, 8)
+
 
 class TestCVHarness:
     def test_cross_validate_config_produces_folds(self, toy_data):

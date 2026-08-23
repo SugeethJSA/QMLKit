@@ -38,6 +38,8 @@ from qmlkit.quantum.qcnn import QuantumConvolutionalClassifier
 from qmlkit.quantum.qsvm import QSVMClassifier
 from qmlkit.quantum.vqc import VariationalQuantumClassifier
 
+from qmlkit.quantum.kernel_features import QuantumKernelFeatureTransformer
+
 REDUCTION_METHODS = ("none", "pca", "mutual_info", "autoencoder")
 EMBEDDINGS = ("none", "angle", "zz", "cwzz", "cwzz_permuted")
 CLASSICAL_HEADS = (
@@ -117,7 +119,11 @@ def _make_head(spec: "PipelineSpec", cov_matrix: Optional[np.ndarray]) -> Any:
         from sklearn.ensemble import RandomForestClassifier
 
         return RandomForestClassifier(n_estimators=150, max_depth=8, random_state=seed)
-    if spec.head in ("xgboost", "quantum_augmented_xgb"):
+    if spec.head in (
+        "xgboost",
+        "quantum_augmented_xgb",
+        "quantum_kernel_xgb",
+    ):
         if HAS_XGB:
             return XGBClassifier(
                 n_estimators=100, max_depth=4, learning_rate=0.08,
@@ -146,6 +152,7 @@ class PipelineSpec:
     head: str = "qsvm"
     covariance_mode: str = "train"  # train | identity | permuted handled via embedding suffix
     vqc_epochs: int = 8
+    n_landmarks: int = 12
     seed: int = 42
     meta: Dict[str, Any] = field(default_factory=dict)
 
@@ -158,10 +165,10 @@ class PipelineSpec:
             "head": self.head,
             "covariance_mode": self.covariance_mode,
             "vqc_epochs": self.vqc_epochs,
+            "n_landmarks": self.n_landmarks,
             "seed": self.seed,
             **self.meta,
         }
-
 
 class HybridPipeline:
     """Leak-free composition: scaler -> reduction -> [quantum head | classical head].
@@ -177,6 +184,7 @@ class HybridPipeline:
         self.cov_matrix: Optional[np.ndarray] = None
         self.head: Optional[Any] = None
         self.augmenter: Optional[VariationalQuantumClassifier] = None
+        self.quantum_transformer: Optional[QuantumKernelFeatureTransformer] = None
         self.impute_medians: Optional[np.ndarray] = None  # train-set medians (NaN handling)
         self.is_fitted = False
 
@@ -248,8 +256,43 @@ class HybridPipeline:
         else:
             self.cov_matrix = None
 
-        if spec.head == "quantum_augmented_xgb":
-            # VQC screening signal becomes an extra engineered feature.
+        if spec.head == "quantum_kernel_xgb":
+            map_type = {
+                "angle": "Angle",
+                "zz": "ZZ",
+                "cwzz": "BioZZ",
+                "cwzz_permuted": "BioZZ",
+            }.get(spec.embedding, "ZZ")
+
+            self.quantum_transformer = QuantumKernelFeatureTransformer(
+                n_qubits=X_reduced.shape[1],
+                feature_map_type=map_type,
+                covariance_matrix=self.cov_matrix,
+                n_landmarks=spec.n_landmarks,
+                seed=spec.seed,
+            )
+
+            quantum_features = self.quantum_transformer.fit_transform(
+                X_reduced,
+                y,
+            )
+
+            X_head = np.hstack([
+                X_reduced,
+                quantum_features,
+            ])
+
+            plain = dataclasses.replace(
+                spec,
+                head="xgboost",
+            )
+
+            self.head = _make_head(
+                plain,
+                cov_matrix=None,
+            )
+
+        elif spec.head == "quantum_augmented_xgb":
             self.augmenter = VariationalQuantumClassifier(
                 n_qubits=X_reduced.shape[1],
                 n_layers=1,
@@ -257,14 +300,39 @@ class HybridPipeline:
                 epochs=spec.vqc_epochs,
                 covariance_matrix=self.cov_matrix,
             )
+
             self.augmenter.fit(X_reduced, y)
-            aug_proba = self.augmenter.predict_proba(X_reduced)[:, 1].reshape(-1, 1)
-            X_head = np.hstack([X_scaled, aug_proba])
-            plain = dataclasses.replace(spec, head="xgboost")
-            self.head = _make_head(plain, cov_matrix=None)
+
+            aug_proba = self.augmenter.predict_proba(
+                X_reduced
+            )[:, 1].reshape(-1, 1)
+
+            X_head = np.hstack([
+                X_scaled,
+                aug_proba,
+            ])
+
+            plain = dataclasses.replace(
+                spec,
+                head="xgboost",
+            )
+
+            self.head = _make_head(
+                plain,
+                cov_matrix=None,
+            )
+
         else:
-            self.head = _make_head(spec, cov_matrix=self.cov_matrix)
+            self.head = _make_head(
+                spec,
+                cov_matrix=self.cov_matrix,
+            )
+
             X_head = X_reduced
+
+        self.head.fit(X_head, y)
+        self.is_fitted = True
+        return self
 
         self.head.fit(X_head, y)
         self.is_fitted = True
@@ -282,11 +350,44 @@ class HybridPipeline:
 
     def predict_proba(self, X: pd.DataFrame | np.ndarray) -> np.ndarray:
         X_scaled, X_reduced = self.transform_input(X)
-        if self.spec.head == "quantum_augmented_xgb":
-            aug = self.augmenter.predict_proba(X_reduced)[:, 1].reshape(-1, 1)
-            return self.head.predict_proba(np.hstack([X_scaled, aug]))
-        proba = self.head.predict_proba(X_reduced)
-        return proba if proba.ndim == 2 else np.vstack([1 - proba, proba]).T
+
+        if self.spec.head == "quantum_kernel_xgb":
+            if self.quantum_transformer is None:
+                raise RuntimeError("Quantum kernel transformer is missing.")
+
+            quantum_features = self.quantum_transformer.transform(
+                X_reduced
+            )
+
+            X_head = np.hstack([
+                X_reduced,
+                quantum_features,
+            ])
+
+            proba = self.head.predict_proba(X_head)
+
+        elif self.spec.head == "quantum_augmented_xgb":
+            aug = self.augmenter.predict_proba(
+                X_reduced
+            )[:, 1].reshape(-1, 1)
+
+            proba = self.head.predict_proba(
+                np.hstack([
+                    X_scaled,
+                    aug,
+                ])
+            )
+
+        else:
+            proba = self.head.predict_proba(
+                X_reduced
+            )
+
+        return (
+            proba
+            if proba.ndim == 2
+            else np.vstack([1 - proba, proba]).T
+        )
 
     def predict(self, X: pd.DataFrame | np.ndarray) -> np.ndarray:
         return (np.argmax(self.predict_proba(X), axis=1)).astype(int)
