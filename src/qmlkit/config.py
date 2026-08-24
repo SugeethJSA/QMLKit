@@ -26,8 +26,8 @@ class SensorArrayConfig(BaseModel):
     n_sensors: int = Field(default=16, ge=4, le=64, description="Number of cross-reactive sensor channels")
     sampling_freq_hz: float = Field(default=10.0, description="Sampling rate in Hz")
     transient_steps: int = Field(default=100, description="Time steps recorded per sensor during exposure")
-    baseline_noise_sigma: float = Field(default=0.03, description="Sensor Gaussian white noise standard deviation")
-    drift_amplitude: float = Field(default=0.02, description="Baseline low-frequency drift amplitude")
+    baseline_noise_sigma: float = Field(default=0.08, description="Sensor Gaussian white noise standard deviation")
+    drift_amplitude: float = Field(default=0.04, description="Baseline low-frequency drift amplitude")
     adsorption_rate: float = Field(default=0.15, description="Mean Langmuir adsorption rate constant")
     desorption_rate: float = Field(default=0.08, description="Mean Langmuir desorption rate constant")
 

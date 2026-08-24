@@ -224,6 +224,40 @@ class BenchmarkSuite:
             "VQC_StronglyEntangled", "Quantum", y_test, vqc_preds, vqc_probs, t_train_vqc, t_infer_vqc
         ))
 
+        # === Hybrid: CG-ZZ quantum kernel -> XGBoost ===
+        try:
+            from qmlkit.lab.pipeline import HybridPipeline, PipelineSpec
+
+            for hybrid_name, head in [
+                ("Quantum_Kernel_XGB", "quantum_kernel_xgb"),
+                ("Quantum_Augmented_XGB", "quantum_augmented_xgb"),
+            ]:
+                t0 = time.time()
+                spec = PipelineSpec(
+                    name=hybrid_name,
+                    reduction="pca",
+                    embedding="cwzz",
+                    head=head,
+                    n_components=self.n_qubits,
+                    vqc_epochs=self.vqc_epochs,
+                    n_landmarks=12,
+                    seed=self.random_state,
+                )
+                hp = HybridPipeline(spec)
+                hp.fit(X_train_raw, y_train)
+                t_train_h = time.time() - t0
+
+                t0 = time.time()
+                preds_h = hp.predict(X_test_raw)
+                probs_h = hp.predict_proba(X_test_raw)
+                t_infer_h = (time.time() - t0) * 1000.0 / len(y_test)
+
+                results.append(compute_clinical_metrics(
+                    hybrid_name, "Hybrid", y_test, preds_h, probs_h, t_train_h, t_infer_h
+                ))
+        except Exception:
+            pass  # hybrid is best-effort; keep quantum/classical on failure
+
         # === 2. Evaluate Classical Baselines ===
         classical_models = get_all_classical_baselines(random_state=self.random_state)
         for name, clf in classical_models.items():

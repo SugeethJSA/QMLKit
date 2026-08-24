@@ -293,19 +293,41 @@ class HybridPipeline:
             )
 
         elif spec.head == "quantum_augmented_xgb":
-            self.augmenter = VariationalQuantumClassifier(
-                n_qubits=X_reduced.shape[1],
-                n_layers=1,
-                feature_map_type="BioZZ" if spec.embedding.startswith("cwzz") else "ZZ",
-                epochs=spec.vqc_epochs,
-                covariance_matrix=self.cov_matrix,
-            )
+            # Leak-free: OOF VQC predictions for XGB training (prevents in-sample optimism that inflated 100% scores)
+            # Falls back to in-sample if folds impossible (tiny class counts).
+            try:
+                from sklearn.model_selection import StratifiedKFold
 
-            self.augmenter.fit(X_reduced, y)
-
-            aug_proba = self.augmenter.predict_proba(
-                X_reduced
-            )[:, 1].reshape(-1, 1)
+                n_splits = 3
+                # ensure enough samples per class
+                _, counts = np.unique(y, return_counts=True)
+                if min(counts) >= n_splits and len(y) >= n_splits * 2:
+                    oof = np.zeros((len(y), 1), dtype=float)
+                    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=spec.seed)
+                    for tr_idx, va_idx in skf.split(X_reduced, y):
+                        fold_aug = VariationalQuantumClassifier(
+                            n_qubits=X_reduced.shape[1],
+                            n_layers=1,
+                            feature_map_type="BioZZ" if spec.embedding.startswith("cwzz") else "ZZ",
+                            epochs=max(1, spec.vqc_epochs // 2),  # cheaper per fold
+                            covariance_matrix=self.cov_matrix,
+                        )
+                        fold_aug.fit(X_reduced[tr_idx], y[tr_idx])
+                        oof[va_idx, 0] = fold_aug.predict_proba(X_reduced[va_idx])[:, 1]
+                    aug_proba = oof
+                else:
+                    raise ValueError("insufficient samples for OOF")
+            except Exception:
+                # fallback: in-sample (original behavior) if OOF fails
+                tmp_aug = VariationalQuantumClassifier(
+                    n_qubits=X_reduced.shape[1],
+                    n_layers=1,
+                    feature_map_type="BioZZ" if spec.embedding.startswith("cwzz") else "ZZ",
+                    epochs=spec.vqc_epochs,
+                    covariance_matrix=self.cov_matrix,
+                )
+                tmp_aug.fit(X_reduced, y)
+                aug_proba = tmp_aug.predict_proba(X_reduced)[:, 1].reshape(-1, 1)
 
             X_head = np.hstack([
                 X_scaled,
@@ -321,6 +343,15 @@ class HybridPipeline:
                 plain,
                 cov_matrix=None,
             )
+            # Refit augmenter on full data for inference (test-time)
+            self.augmenter = VariationalQuantumClassifier(
+                n_qubits=X_reduced.shape[1],
+                n_layers=1,
+                feature_map_type="BioZZ" if spec.embedding.startswith("cwzz") else "ZZ",
+                epochs=spec.vqc_epochs,
+                covariance_matrix=self.cov_matrix,
+            )
+            self.augmenter.fit(X_reduced, y)
 
         else:
             self.head = _make_head(
@@ -329,10 +360,6 @@ class HybridPipeline:
             )
 
             X_head = X_reduced
-
-        self.head.fit(X_head, y)
-        self.is_fitted = True
-        return self
 
         self.head.fit(X_head, y)
         self.is_fitted = True

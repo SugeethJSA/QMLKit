@@ -45,6 +45,8 @@ def default_presets(vqc_epochs: int = 8, seed: int = 42) -> List[PipelineSpec]:
         PipelineSpec(name="AE-VQC", reduction="autoencoder", embedding="cwzz", head="vqc", **base),
         PipelineSpec(name="Quantum-Augmented-XGB", reduction="pca", embedding="cwzz",
                      head="quantum_augmented_xgb", **base),
+        PipelineSpec(name="Quantum-Kernel-XGB (CG-ZZ+XGB)", reduction="pca", embedding="cwzz",
+                     head="quantum_kernel_xgb", **base),
         PipelineSpec(name="QCNN", reduction="pca", embedding="cwzz", head="qcnn", **base),
         PipelineSpec(name="PCA-XGBoost (classical control)", reduction="pca", embedding="none",
                      head="xgboost", **base),

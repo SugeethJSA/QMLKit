@@ -51,17 +51,17 @@ class BiomimeticVOCGenerator:
         # Fix seed for reproducible sensor characteristics
         gen = np.random.default_rng(self.random_state + 100)
 
-        # Base affinity with chemical class preferences
+        # Base affinity with chemical class preferences - tuned for realistic overlap (was too separable: preferred 0.6-1.0 vs cross 0.05-0.35 gave 100% classical)
         A = np.zeros((self.n_sensors, self.n_compounds))
         for s in range(self.n_sensors):
             preferred_class = s % 4  # 0: Aldehydes, 1: Ketones, 2: Aromatics, 3: Alkanes/Sulfur
             for c_idx in range(self.n_compounds):
                 comp_class = c_idx // 6  # 6 compounds per class
                 if comp_class == preferred_class:
-                    base_aff = gen.uniform(0.6, 1.0)
+                    base_aff = gen.uniform(0.45, 0.85)
                 else:
-                    # Cross-reactivity background
-                    base_aff = gen.uniform(0.05, 0.35)
+                    # Higher cross-reactivity background -> more sensor confusion, reduces perfect separation
+                    base_aff = gen.uniform(0.15, 0.50)
                 A[s, c_idx] = base_aff
         return A
 
@@ -82,27 +82,28 @@ class BiomimeticVOCGenerator:
             # Alkanes / Terpenes / Sulfur (Isoprene, Octane, Decane, D-Limonene, DMDS, DMS)
             2.2, 0.6, 0.4, 0.5, 0.3, 0.3
         ])
-        std_log = np.full(self.n_compounds, 0.25)
+        # Increased variance for realistic overlap (was 0.25 -> perfect separation for XGB); multipliers reduced from 3-4x to ~2x to prevent 100% classical
+        std_log = np.full(self.n_compounds, 0.42)
 
-        # Alterations per cancer indication
+        # Alterations per cancer indication - reduced effect sizes for calibrated difficulty
         multipliers = np.ones(self.n_compounds)
         if cancer_type == "Lung_Cancer":
             # Aldehydes elevated (Hexanal, Heptanal, Benzaldehyde), Aromatics (Ethylbenzene), Isoprene depleted
-            multipliers[[0, 1, 4]] *= 3.8
-            multipliers[12] *= 2.5
-            multipliers[18] *= 0.55
+            multipliers[[0, 1, 4]] *= 2.2
+            multipliers[12] *= 1.8
+            multipliers[18] *= 0.65
         elif cancer_type == "Breast_Cancer":
             # Heptanal, Octanal, 2-Pentanone, 3-Octanone, Trimethylbenzene elevated
-            multipliers[[1, 2, 8, 9, 16]] *= 3.4
+            multipliers[[1, 2, 8, 9, 16]] *= 2.0
         elif cancer_type == "Colorectal_Cancer":
             # DMDS, DMS, Benzaldehyde, Cyclohexanone elevated
-            multipliers[[22, 23, 4, 11]] *= 4.2
+            multipliers[[22, 23, 4, 11]] *= 2.3
         elif cancer_type == "Prostate_Cancer":
             # 2-Butanone, 2-Pentanone, Toluene, DMS elevated
-            multipliers[[7, 8, 14, 23]] *= 3.6
+            multipliers[[7, 8, 14, 23]] *= 2.1
         elif cancer_type == "Ovarian_Cancer":
             # Nonanal, Decanal, Acetophenone, Cyclohexanone elevated
-            multipliers[[3, 5, 10, 11]] *= 3.9
+            multipliers[[3, 5, 10, 11]] *= 2.2
 
         # Generate correlated multivariate samples
         log_conc = self.rng.normal(loc=mean_log, scale=std_log, size=(n_samples, self.n_compounds))

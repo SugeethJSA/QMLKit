@@ -24,7 +24,7 @@ from qmlkit.quantum.vqc import VariationalQuantumClassifier
 class TrainRequest(BaseModel):
     model_type: str = Field(
         default="QSVM_BioZZ",
-        description="Model to train (QSVM_BioZZ, QSVM_PauliZZ, VQC_StronglyEntangled, VQC_RealAmplitudes, QCNN, SVM_RBF, SVM_Linear, Random_Forest, XGBoost, MLP_NeuralNet)"
+        description="Model to train (QSVM_BioZZ, QSVM_PauliZZ, VQC_StronglyEntangled, VQC_RealAmplitudes, QCNN, Quantum_Kernel_XGB, Quantum_Augmented_XGB, SVM_RBF, SVM_Linear, Random_Forest, XGBoost, MLP_NeuralNet)"
     )
     target_cancer: str = Field(default="Lung_Cancer", description="Target cancer indication vs Healthy")
     n_qubits: int = Field(default=6, ge=4, le=12, description="Quantum register size")
@@ -206,6 +206,97 @@ def execute_training_job(req: TrainRequest) -> Dict[str, Any]:
             "two_qubit_cnot_gates": 12,
             "nisq_verdict": "HIERARCHICAL - Barren Plateau Immune QCNN"
         }
+
+    elif req.model_type == "Quantum_Kernel_XGB":
+        # CG-ZZ quantum kernel -> XGBoost hybrid (leak-free HybridPipeline)
+        paradigm = "Hybrid"
+        from qmlkit.lab.pipeline import HybridPipeline, PipelineSpec
+
+        spec = PipelineSpec(
+            name="Quantum-Kernel-XGB",
+            reduction="pca",
+            embedding="cwzz",
+            head="quantum_kernel_xgb",
+            n_components=req.n_qubits,
+            n_landmarks=12,
+            vqc_epochs=req.epochs,
+            seed=req.random_seed,
+        )
+        pipeline = HybridPipeline(spec)
+        pipeline.fit(df_train, y_train)
+        t_train = time.time() - t0_train
+
+        t0_infer = time.time()
+        preds = pipeline.predict(df_test)
+        probs = pipeline.predict_proba(df_test)
+        t_infer = (time.time() - t0_infer) * 1000.0 / len(y_test)
+
+        # Circuit profile from quantum kernel (BioZZ)
+        try:
+            raw = pipeline.describe()
+            cp = raw.get("feature_map") if isinstance(raw, dict) and "feature_map" in raw else raw
+            circuit_profile = {
+                "n_qubits": cp.get("n_qubits", req.n_qubits),
+                "circuit_depth": cp.get("circuit_depth", req.n_qubits * 6),
+                "total_gates": cp.get("total_gates", req.n_qubits * 6),
+                "two_qubit_cnot_gates": cp.get("two_qubit_cnot_gates", req.n_qubits * 2),
+                "nisq_verdict": cp.get("nisq_verdict") or cp.get("nisq_compatibility_verdict") or "HYBRID - Quantum Kernel + XGBoost",
+            }
+        except Exception:
+            circuit_profile = {
+                "n_qubits": req.n_qubits,
+                "circuit_depth": req.n_qubits * 6,
+                "total_gates": req.n_qubits * 6,
+                "two_qubit_cnot_gates": req.n_qubits * 2,
+                "nisq_verdict": "HYBRID - Quantum Kernel + XGBoost",
+            }
+
+    elif req.model_type == "Quantum_Augmented_XGB":
+        # VQC BioZZ opinion -> XGBoost hybrid
+        paradigm = "Hybrid"
+        from qmlkit.lab.pipeline import HybridPipeline, PipelineSpec
+
+        spec = PipelineSpec(
+            name="Quantum-Augmented-XGB",
+            reduction="pca",
+            embedding="cwzz",
+            head="quantum_augmented_xgb",
+            n_components=req.n_qubits,
+            vqc_epochs=req.epochs,
+            seed=req.random_seed,
+        )
+        pipeline = HybridPipeline(spec)
+        pipeline.fit(df_train, y_train)
+        t_train = time.time() - t0_train
+        # capture VQC loss if available
+        try:
+            loss_history = [round(float(v), 4) for v in pipeline.augmenter.loss_history] if pipeline.augmenter and hasattr(pipeline.augmenter, "loss_history") else []
+        except Exception:
+            loss_history = []
+
+        t0_infer = time.time()
+        preds = pipeline.predict(df_test)
+        probs = pipeline.predict_proba(df_test)
+        t_infer = (time.time() - t0_infer) * 1000.0 / len(y_test)
+
+        try:
+            raw = pipeline.describe()
+            cp = raw.get("feature_map") if isinstance(raw, dict) and "feature_map" in raw else raw
+            circuit_profile = {
+                "n_qubits": cp.get("n_qubits", req.n_qubits),
+                "circuit_depth": cp.get("circuit_depth", 24),
+                "total_gates": cp.get("total_gates", req.n_qubits * 6),
+                "two_qubit_cnot_gates": cp.get("two_qubit_cnot_gates", req.n_qubits),
+                "nisq_verdict": cp.get("nisq_verdict") or cp.get("nisq_compatibility_verdict") or "HYBRID - VQC Augmented XGBoost",
+            }
+        except Exception:
+            circuit_profile = {
+                "n_qubits": req.n_qubits,
+                "circuit_depth": 24,
+                "total_gates": req.n_qubits * 6,
+                "two_qubit_cnot_gates": req.n_qubits * 2,
+                "nisq_verdict": "HYBRID - VQC Augmented XGBoost",
+            }
 
     else:
         # Classical Model Fallback

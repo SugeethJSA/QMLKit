@@ -82,6 +82,8 @@ const MODELS = [
   { id: "VQC_StronglyEntangled", name: "VQC (Strongly Entangled)", paradigm: "Quantum", desc: "Variational circuit with cyclic multi-qubit CNOTs" },
   { id: "VQC_RealAmplitudes", name: "VQC (Real Amplitudes)", paradigm: "Quantum", desc: "Ry rotation layers with nearest-neighbor entanglement" },
   { id: "QCNN", name: "QCNN (CQSV-Net)", paradigm: "Quantum", desc: "Hierarchical quantum convolution and quantum pooling" },
+  { id: "Quantum_Kernel_XGB", name: "Quantum-Kernel XGBoost (CG-ZZ+XGB)", paradigm: "Hybrid", desc: "CG-ZZ/BioZZ quantum kernel features fused with XGBoost - quantum-first hybrid" },
+  { id: "Quantum_Augmented_XGB", name: "Quantum-Augmented XGBoost (VQC+XGB)", paradigm: "Hybrid", desc: "VQC BioZZ opinion as extra feature for XGBoost - variational hybrid" },
   { id: "SVM_RBF", name: "SVM (RBF Kernel)", paradigm: "Classical", desc: "Classical non-linear radial basis function baseline" },
   { id: "SVM_Linear", name: "Linear SVM", paradigm: "Classical", desc: "Standard classical linear separating hyperplane" },
   { id: "Random_Forest", name: "Random Forest", paradigm: "Classical", desc: "Ensemble of 150 randomized decision trees" },
@@ -225,14 +227,21 @@ export default function TrainingStudio() {
                 onChange={(e) => setModelType(e.target.value)}
                 className="w-full bg-[#0b0f19] border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 focus:border-purple-500 focus:outline-none"
               >
-                <optgroup label="âš›ï¸ Quantum Machine Learning">
+                <optgroup label="Quantum Machine Learning">
                   {MODELS.filter((m) => m.paradigm === "Quantum").map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="ðŸ’» Classical Baselines">
+                <optgroup label="Hybrid Quantum-Classical">
+                  {MODELS.filter((m) => m.paradigm === "Hybrid").map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Classical Baselines">
                   {MODELS.filter((m) => m.paradigm === "Classical").map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name}
@@ -305,8 +314,8 @@ export default function TrainingStudio() {
               </div>
             </div>
 
-            {/* Epochs & Learning Rate (For VQC/QCNN/MLP) */}
-            {(modelType.startsWith("VQC") || modelType === "QCNN" || modelType === "MLP_NeuralNet") && (
+            {/* Epochs & Learning Rate (For VQC/QCNN/MLP + Quantum-Augmented hybrid) */}
+            {(modelType.startsWith("VQC") || modelType === "QCNN" || modelType === "MLP_NeuralNet" || modelType === "Quantum_Augmented_XGB") && (
               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/5">
                 <div className="space-y-1">
                   <label className="text-xs text-gray-400">Epochs</label>
@@ -381,7 +390,7 @@ export default function TrainingStudio() {
                 {isBenchmarking ? (
                   <>
                     <RotateCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
-                    <span>Evaluating All 10 Baselines...</span>
+                    <span>Evaluating All 12 Baselines...</span>
                   </>
                 ) : (
                   <>
@@ -413,7 +422,9 @@ export default function TrainingStudio() {
                             className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
                               trainResult.paradigm === "Quantum"
                                 ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                                : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                                : trainResult.paradigm === "Hybrid"
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                  : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
                             }`}
                           >
                             {trainResult.paradigm}
@@ -590,7 +601,9 @@ export default function TrainingStudio() {
                               className={`text-[10px] px-2 py-0.5 rounded font-bold ${
                                 row.paradigm === "Quantum"
                                   ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                                  : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                                  : row.paradigm === "Hybrid"
+                                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                    : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
                               }`}
                             >
                               {row.paradigm}
