@@ -1,0 +1,389 @@
+name: Release
+
+# Publish a GitHub Release whenever version.properties is updated.
+# - If releasenotes.properties is ALSO changed in the same push, its content is used as the release body.
+# - Otherwise release notes are auto-generated smartly (GitHub generate-notes API + git log fallback).
+# Manual trigger via workflow_dispatch is also supported.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "version.properties"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout (full history for tags & diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Gate - verify version.properties actually changed (push only)
+        id: gate
+        shell: bash
+        run: |
+          set -e
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "manual dispatch -> allow"
+            echo "proceed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          BEFORE="${{ github.event.before }}"
+          SHA="${{ github.sha }}"
+          # handle initial push (before = 0) or missing history
+          if [[ "$BEFORE" == "0000000000000000000000000000000000000000" ]] || [[ -z "$BEFORE" ]] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            echo "no valid BEFORE, checking HEAD~1"
+            if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+              BEFORE="HEAD~1"
+            else
+              echo "first commit, allow"
+              echo "proceed=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+          echo "Diff $BEFORE..$SHA"
+          CHANGED_FILES=$(git diff --name-only "$BEFORE" "$SHA" || git diff --name-only HEAD~1 HEAD || echo "version.properties")
+          echo "$CHANGED_FILES"
+          if echo "$CHANGED_FILES" | grep -q "version.properties"; then
+            echo "version.properties changed -> proceed"
+            echo "proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "version.properties NOT changed -> skip release"
+            echo "proceed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stop if version.properties not changed
+        if: steps.gate.outputs.proceed == 'false'
+        shell: bash
+        run: |
+          echo "No version bump in this push, skipping release."
+          exit 0
+
+      - name: Parse version from version.properties
+        id: version
+        shell: bash
+        run: |
+          set -e
+          FILE="version.properties"
+          if [[ ! -f "$FILE" ]]; then
+            echo "::error::version.properties not found at repo root"
+            exit 1
+          fi
+          echo "--- version.properties ---"
+          cat "$FILE"
+          echo "--------------------------"
+          # Try to extract version= / version: / app.version= etc. (case-insensitive, allow spaces)
+          VERSION_RAW=""
+          # 1) look for line with 'version' key
+          if grep -qiE '^\s*[^#]*version\s*[:=]' "$FILE"; then
+            VERSION_RAW=$(grep -i -m1 -E '^\s*[^#]*version\s*[:=]' "$FILE" | sed -E 's/^\s*[^=:=]*[:=]\s*//' | tr -d '\r' | xargs || true)
+          fi
+          # 2) fallback: first non-empty non-comment line
+          if [[ -z "$VERSION_RAW" ]]; then
+            VERSION_RAW=$(grep -v '^\s*#' "$FILE" | grep -v '^\s*!' | grep -v '^\s*$' | head -n1 | tr -d '\r' | xargs || true)
+            # if that line still contains '=', take after '='
+            if echo "$VERSION_RAW" | grep -q '='; then
+              # only strip if it looks like key=value with single value, not markdown
+              KV_COUNT=$(echo "$VERSION_RAW" | tr -cd '=' | wc -c)
+              if [[ "$KV_COUNT" -eq 1 ]] && ! echo "$VERSION_RAW" | grep -qE '^\s*[-*#>]'; then
+                VERSION_RAW=$(echo "$VERSION_RAW" | sed -E 's/^[^=]*=\s*//')
+              fi
+            fi
+          fi
+          # strip leading 'v' and whitespace
+          VERSION=$(echo "$VERSION_RAW" | sed -E 's/^[vV]//' | xargs)
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::Could not parse version from version.properties (raw='$VERSION_RAW')"
+            exit 1
+          fi
+          # basic semver validation (allow 0.1.0, 1.2.3-alpha, 1.0.0+build etc.)
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "::warning::Version '$VERSION' does not look like semver (expected x.y.z), proceeding anyway"
+          fi
+          TAG="v$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "raw=$VERSION_RAW" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION  tag: $TAG"
+
+      - name: Check if version actually bumped vs previous commit
+        id: bump
+        shell: bash
+        run: |
+          set -e
+          CUR="${{ steps.version.outputs.version }}"
+          # get version from previous commit if exists
+          PREV_RAW=""
+          if git rev-parse --verify HEAD~1 >/dev/null 2>&1 && git show HEAD~1:version.properties >/tmp/prev_version.properties 2>/dev/null; then
+            if grep -qiE '^\s*[^#]*version\s*[:=]' /tmp/prev_version.properties; then
+              PREV_RAW=$(grep -i -m1 -E '^\s*[^#]*version\s*[:=]' /tmp/prev_version.properties | sed -E 's/^\s*[^=:=]*[:=]\s*//' | tr -d '\r' | xargs || true)
+            else
+              PREV_RAW=$(grep -v '^\s*#' /tmp/prev_version.properties | grep -v '^\s*!' | grep -v '^\s*$' | head -n1 | tr -d '\r' | xargs || true)
+              if echo "$PREV_RAW" | grep -q '='; then PREV_RAW=$(echo "$PREV_RAW" | sed -E 's/^[^=]*=\s*//'); fi
+            fi
+            PREV=$(echo "$PREV_RAW" | sed -E 's/^[vV]//' | xargs)
+            echo "Previous version: $PREV (raw: $PREV_RAW)"
+            if [[ "$PREV" == "$CUR" ]]; then
+              echo "Version unchanged ($CUR) -> will skip if tag already exists"
+              echo "bumped=false" >> $GITHUB_OUTPUT
+            else
+              echo "Version bumped $PREV -> $CUR"
+              echo "bumped=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "No previous version.properties found (first version), treat as bumped"
+            echo "bumped=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if tag already exists
+        id: tagcheck
+        shell: bash
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if git tag --list | grep -qx "$TAG"; then
+            echo "Tag $TAG already exists locally"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            # also check remote
+            if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
+              echo "Tag $TAG exists on remote"
+              echo "exists=true" >> $GITHUB_OUTPUT
+            else
+              echo "Tag $TAG does not exist"
+              echo "exists=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Skip if tag already exists and version not bumped
+        if: steps.tagcheck.outputs.exists == 'true' && steps.bump.outputs.bumped == 'false'
+        shell: bash
+        run: |
+          echo "::notice::Tag ${{ steps.version.outputs.tag }} already exists and version not bumped - skipping release (idempotent)."
+          exit 0
+
+      - name: Detect if releasenotes.properties was changed in this push
+        id: notes
+        shell: bash
+        run: |
+          set -e
+          BEFORE="${{ github.event.before }}"
+          SHA="${{ github.sha }}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # manual: use custom if file exists and non-empty (keep markdown ## headers)
+            if [[ -f "releasenotes.properties" ]] && [[ -s "releasenotes.properties" ]]; then
+              # filter only single-# properties comments (keep ## markdown headers) and ! comments
+              NON_COMMENT=$(grep -vE '^\s*#[^#]' releasenotes.properties | grep -v '^\s*!' | grep -v '^\s*$' | head -n1 || true)
+              if [[ -n "$NON_COMMENT" ]]; then
+                echo "workflow_dispatch with non-empty releasenotes.properties -> custom"
+                echo "custom=true" >> $GITHUB_OUTPUT
+                exit 0
+              fi
+            fi
+            echo "workflow_dispatch without custom notes -> autogenerate"
+            echo "custom=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if [[ "$BEFORE" == "0000000000000000000000000000000000000000" ]] || [[ -z "$BEFORE" ]] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then BEFORE="HEAD~1"; else BEFORE="HEAD"; fi
+          fi
+          echo "Checking diff $BEFORE..$SHA for releasenotes.properties"
+          DIFF_FILES=$(git diff --name-only "$BEFORE" "$SHA" 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          echo "Changed files:"
+          echo "$DIFF_FILES"
+          if echo "$DIFF_FILES" | grep -q "releasenotes.properties"; then
+            echo "releasenotes.properties changed in this push -> use custom"
+            echo "custom=true" >> $GITHUB_OUTPUT
+          else
+            echo "releasenotes.properties NOT changed -> autogenerate"
+            echo "custom=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build release body from releasenotes.properties (custom)
+        if: steps.notes.outputs.custom == 'true'
+        shell: bash
+        run: |
+          set -e
+          FILE="releasenotes.properties"
+          echo "Using custom $FILE"
+          cat "$FILE"
+          echo "--- parsing ---"
+          python3 << 'PY'
+          import pathlib, re
+          p = pathlib.Path("releasenotes.properties")
+          text = p.read_text(encoding="utf-8", errors="ignore")
+          lines = text.splitlines()
+          def is_comment(line: str) -> bool:
+              s = line.lstrip()
+              if not s:
+                  return False
+              if s.startswith("!"):
+                  return True
+              # single '#' is a properties comment, but '##'/'###' are markdown headers — keep them
+              if s.startswith("#") and not s.startswith("##"):
+                  return True
+              return False
+          filtered = [l for l in lines if not is_comment(l)]
+          raw_filtered = "\n".join(filtered).strip()
+          raw_full = text.strip()
+          # try to detect properties-style key
+          # allow keys: releasenotes, releaseNotes, release.notes, release_notes, notes, changelog
+          m = re.match(r'^\s*(releasenotes|releaseNotes|release\.notes|release_notes|notes|changelog)\s*[:=]\s*(.*)', raw_filtered, re.IGNORECASE | re.DOTALL)
+          if m:
+              # m.group(2) contains value and possibly following lines (due to DOTALL)
+              # Re-parse: split filtered into first line and rest
+              first_line = filtered[0] if filtered else ""
+              m2 = re.match(r'^\s*(releasenotes|releaseNotes|release\.notes|release_notes|notes|changelog)\s*[:=]\s*(.*)', first_line, re.IGNORECASE)
+              if m2:
+                  first_val = m2.group(2).strip()
+                  rest = "\n".join(filtered[1:]).strip()
+                  if first_val and rest:
+                      notes = first_val + "\n" + rest
+                  elif first_val:
+                      notes = first_val
+                  else:
+                      notes = rest
+              else:
+                  notes = m.group(2)
+              notes = notes.replace("\\n", "\n")
+          else:
+              # fallback: if file is single key=value and not markdown, extract value
+              if len(filtered) == 1 and "=" in filtered[0] and not filtered[0].lstrip().startswith(("-", "*", "#", ">")):
+                  notes = filtered[0].split("=", 1)[1].strip().replace("\\n", "\n")
+              else:
+                  # treat whole file (minus single-# comments) as markdown, or full file if that was empty
+                  notes = raw_filtered if raw_filtered else raw_full
+                  notes = notes.replace("\\n", "\n")
+          if not notes.strip():
+              notes = raw_filtered or raw_full
+          # ensure not empty
+          if not notes.strip():
+              notes = "No release notes provided."
+          pathlib.Path("/tmp/release_notes.md").write_text(notes, encoding="utf-8")
+          print("--- generated /tmp/release_notes.md ---")
+          print(notes[:2000])
+          PY
+          echo "custom body written to /tmp/release_notes.md"
+          cat /tmp/release_notes.md
+
+      - name: Autogenerate release notes (smart fallback)
+        if: steps.notes.outputs.custom != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG="${{ steps.version.outputs.tag }}"
+          # previous tag for changelog range
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          # also try sorted semver tags
+          if [[ -z "$PREV_TAG" ]]; then
+            PREV_TAG=$(git tag --sort=-v:refname | grep -v "$TAG" | head -n1 || echo "")
+          fi
+          echo "Current tag: $TAG"
+          echo "Previous tag: ${PREV_TAG:-<none>}"
+          # Try GitHub generate-notes API (smart: categorizes by conventional commits, PRs)
+          mkdir -p /tmp
+          GEN_SUCCESS=false
+          if [[ -n "$GH_TOKEN" ]]; then
+            echo "Attempting GitHub generate-notes API..."
+            # build JSON payload: tag_name required, previous_tag_name optional, target_commitish main
+            if [[ -n "$PREV_TAG" ]]; then
+              JSON=$(jq -n --arg tag "$TAG" --arg prev "$PREV_TAG" --arg target "main" '{tag_name:$tag, previous_tag_name:$prev, target_commitish:$target}')
+            else
+              JSON=$(jq -n --arg tag "$TAG" --arg target "main" '{tag_name:$tag, target_commitish:$target}')
+            fi
+            echo "$JSON"
+            HTTP_CODE=$(curl -s -o /tmp/gen.json -w "%{http_code}" -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/generate-notes" \
+              -d "$JSON" || echo "000")
+            echo "API HTTP code: $HTTP_CODE"
+            if [[ "$HTTP_CODE" == "200" ]] && jq -e '.body' /tmp/gen.json >/dev/null 2>&1; then
+              BODY=$(jq -r '.body' /tmp/gen.json)
+              if [[ -n "$BODY" && "$BODY" != "null" ]]; then
+                echo "$BODY" > /tmp/release_notes.md
+                echo "Used GitHub API generated notes"
+                cat /tmp/release_notes.md
+                GEN_SUCCESS=true
+              fi
+            else
+              echo "API failed or no body, fallback to git log"
+              cat /tmp/gen.json || true
+            fi
+          fi
+          if [[ "$GEN_SUCCESS" != "true" ]]; then
+            echo "Falling back to git log autogeneration"
+            if [[ -n "$PREV_TAG" ]]; then
+              RANGE="$PREV_TAG..HEAD"
+              COMPARE_URL="https://github.com/${{ github.repository }}/compare/$PREV_TAG...$TAG"
+            else
+              RANGE="HEAD"
+              COMPARE_URL="https://github.com/${{ github.repository }}/commits/$TAG"
+            fi
+            {
+              echo "## What's Changed"
+              echo ""
+              # grouped log: features, fixes, others - simple)
+              echo "### Commits"
+              git log "$RANGE" --pretty=format:"- %s (%h) by %an" --no-merges | head -n 100 || echo "- No commits found"
+              echo ""
+              echo ""
+              echo "**Full Changelog**: $COMPARE_URL"
+              echo ""
+              echo "_Auto-generated from git history (fallback)._"
+            } > /tmp/release_notes.md
+            cat /tmp/release_notes.md
+          fi
+
+      - name: Create GitHub Release (custom notes)
+        if: steps.notes.outputs.custom == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          body_path: /tmp/release_notes.md
+          generate_release_notes: false
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release (autogenerated notes)
+        if: steps.notes.outputs.custom != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Version: \`${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Tag: \`${{ steps.version.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Notes source: \`${{ steps.notes.outputs.custom == 'true' && 'releasenotes.properties (custom)' || 'autogenerated (GitHub API + git log)' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Tag exists before: \`${{ steps.tagcheck.outputs.exists }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Body preview:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -n 50 /tmp/release_notes.md >> $GITHUB_STEP_SUMMARY || echo "no body" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
