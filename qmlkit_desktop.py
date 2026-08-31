@@ -25,6 +25,8 @@ logger = logging.getLogger("qmlkit-desktop")
 def resource_root() -> Path:
     """Directory containing bundled assets (works from source and PyInstaller)."""
     if getattr(sys, "frozen", False):
+        if hasattr(sys, "_MEIPASS"):
+            return Path(sys._MEIPASS).resolve()
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent
 
@@ -32,11 +34,19 @@ def resource_root() -> Path:
 def frontend_dist() -> Path | None:
     """Prefer an external hot-swappable folder, else the embedded snapshot."""
     root = resource_root()
-    for candidate in (
+    candidates = []
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        candidates.extend([
+            exe_dir / "frontend_out",
+            exe_dir / "frontend" / "out",
+        ])
+    candidates.extend([
         root / "frontend_out",
         root / "frontend" / "out",
         root.parent / "frontend" / "out",
-    ):
+    ])
+    for candidate in candidates:
         if candidate.is_dir():
             return candidate
     return None

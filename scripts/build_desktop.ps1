@@ -23,7 +23,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "==> [3/3] PyInstaller bundle" -ForegroundColor Cyan
-python -m pyinstaller packaging/qmlkit_desktop.spec --noconfirm --distpath dist --workpath build/pyinstaller
+python -m PyInstaller packaging/qmlkit_desktop.spec --noconfirm --distpath dist --workpath build/pyinstaller
 if ($LASTEXITCODE -ne 0) { throw "pyinstaller failed" }
 
 $out = "dist/QMLKitConsole/QMLKitConsole.exe"

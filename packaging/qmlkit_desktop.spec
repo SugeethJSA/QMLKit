@@ -16,21 +16,9 @@ a = Analysis(
     binaries=[],
     datas=[
         # Embedded frontend snapshot (external frontend_out/ overrides at runtime).
-        *(
-            [
-                (
-                    str(src),
-                    "frontend_out" + rel,
-                )
-                for src, rel in [
-                    (p, str(p.relative_to(ROOT / "frontend" / "out")))
-                    for p in (ROOT / "frontend" / "out").rglob("*")
-                    if p.is_file()
-                ]
-            ]
-            if (ROOT / "frontend" / "out").is_dir()
-            else []
-        ),
+        *((str(ROOT / "frontend" / "out"), "frontend_out"),)
+        if (ROOT / "frontend" / "out").is_dir()
+        else [],
     ],
     hiddenimports=[
         "uvicorn.logging",

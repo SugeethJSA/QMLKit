@@ -1,6 +1,7 @@
 name: Release
 
 # Publish a GitHub Release whenever version.properties is updated.
+# - Compiles runnable binaries for Windows, macOS (Apple Silicon arm64 & Intel x64), and Linux.
 # - If releasenotes.properties is ALSO changed in the same push, its content is used as the release body.
 # - Otherwise release notes are auto-generated smartly (GitHub generate-notes API + git log fallback).
 # Manual trigger via workflow_dispatch is also supported.
@@ -20,9 +21,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  prep-release:
+    name: Prepare Release & Gate
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    outputs:
+      proceed: ${{ steps.gate.outputs.proceed }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      is_custom_notes: ${{ steps.notes.outputs.custom }}
     steps:
       - name: Checkout (full history for tags & diff)
         uses: actions/checkout@v4
@@ -64,14 +71,8 @@ jobs:
             echo "proceed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Stop if version.properties not changed
-        if: steps.gate.outputs.proceed == 'false'
-        shell: bash
-        run: |
-          echo "No version bump in this push, skipping release."
-          exit 0
-
       - name: Parse version from version.properties
+        if: steps.gate.outputs.proceed == 'true'
         id: version
         shell: bash
         run: |
@@ -119,6 +120,7 @@ jobs:
           echo "Detected version: $VERSION  tag: $TAG"
 
       - name: Check if version actually bumped vs previous commit
+        if: steps.gate.outputs.proceed == 'true'
         id: bump
         shell: bash
         run: |
@@ -148,6 +150,7 @@ jobs:
           fi
 
       - name: Check if tag already exists
+        if: steps.gate.outputs.proceed == 'true'
         id: tagcheck
         shell: bash
         run: |
@@ -166,14 +169,15 @@ jobs:
             fi
           fi
 
-      - name: Skip if tag already exists and version not bumped
-        if: steps.tagcheck.outputs.exists == 'true' && steps.bump.outputs.bumped == 'false'
+      - name: Update proceed flag if tag exists and version not bumped
+        if: steps.gate.outputs.proceed == 'true' && steps.tagcheck.outputs.exists == 'true' && steps.bump.outputs.bumped == 'false'
         shell: bash
         run: |
           echo "::notice::Tag ${{ steps.version.outputs.tag }} already exists and version not bumped - skipping release (idempotent)."
-          exit 0
+          echo "proceed=false" >> $GITHUB_OUTPUT
 
       - name: Detect if releasenotes.properties was changed in this push
+        if: steps.gate.outputs.proceed == 'true'
         id: notes
         shell: bash
         run: |
@@ -211,7 +215,7 @@ jobs:
           fi
 
       - name: Build release body from releasenotes.properties (custom)
-        if: steps.notes.outputs.custom == 'true'
+        if: steps.gate.outputs.proceed == 'true' && steps.notes.outputs.custom == 'true'
         shell: bash
         run: |
           set -e
@@ -270,15 +274,17 @@ jobs:
           # ensure not empty
           if not notes.strip():
               notes = "No release notes provided."
-          pathlib.Path("/tmp/release_notes.md").write_text(notes, encoding="utf-8")
-          print("--- generated /tmp/release_notes.md ---")
+          mkdir_path = pathlib.Path("build-notes")
+          mkdir_path.mkdir(parents=True, exist_ok=True)
+          (mkdir_path / "release_notes.md").write_text(notes, encoding="utf-8")
+          print("--- generated build-notes/release_notes.md ---")
           print(notes[:2000])
           PY
-          echo "custom body written to /tmp/release_notes.md"
-          cat /tmp/release_notes.md
+          echo "custom body written to build-notes/release_notes.md"
+          cat build-notes/release_notes.md
 
       - name: Autogenerate release notes (smart fallback)
-        if: steps.notes.outputs.custom != 'true'
+        if: steps.gate.outputs.proceed == 'true' && steps.notes.outputs.custom != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -294,7 +300,7 @@ jobs:
           echo "Current tag: $TAG"
           echo "Previous tag: ${PREV_TAG:-<none>}"
           # Try GitHub generate-notes API (smart: categorizes by conventional commits, PRs)
-          mkdir -p /tmp
+          mkdir -p build-notes /tmp
           GEN_SUCCESS=false
           if [[ -n "$GH_TOKEN" ]]; then
             echo "Attempting GitHub generate-notes API..."
@@ -314,9 +320,9 @@ jobs:
             if [[ "$HTTP_CODE" == "200" ]] && jq -e '.body' /tmp/gen.json >/dev/null 2>&1; then
               BODY=$(jq -r '.body' /tmp/gen.json)
               if [[ -n "$BODY" && "$BODY" != "null" ]]; then
-                echo "$BODY" > /tmp/release_notes.md
+                echo "$BODY" > build-notes/release_notes.md
                 echo "Used GitHub API generated notes"
-                cat /tmp/release_notes.md
+                cat build-notes/release_notes.md
                 GEN_SUCCESS=true
               fi
             else
@@ -344,17 +350,145 @@ jobs:
               echo "**Full Changelog**: $COMPARE_URL"
               echo ""
               echo "_Auto-generated from git history (fallback)._"
-            } > /tmp/release_notes.md
-            cat /tmp/release_notes.md
+            } > build-notes/release_notes.md
+            cat build-notes/release_notes.md
           fi
 
+      - name: Upload release notes artifact
+        if: steps.gate.outputs.proceed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: build-notes/release_notes.md
+          retention-days: 1
+
+  build-binaries:
+    name: Build (${{ matrix.target }})
+    needs: prep-release
+    if: needs.prep-release.outputs.proceed == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: windows-x64
+          - os: macos-latest
+            target: macos-arm64
+          - os: macos-13
+            target: macos-x64
+          - os: ubuntu-latest
+            target: linux-x64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "9"
+
+      - name: Install Frontend Dependencies
+        run: pnpm install
+
+      - name: Build Frontend Static Export
+        run: pnpm --filter frontend build
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python Dependencies & PyInstaller
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install PyInstaller
+          python -m pip install -e .
+
+      - name: Build Desktop Application Bundle (PyInstaller)
+        run: |
+          python -m PyInstaller packaging/qmlkit_desktop.spec --noconfirm --distpath dist --workpath build/pyinstaller
+
+      - name: Package Windows Binary (.zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-artifacts
+          $versionTag = "${{ needs.prep-release.outputs.tag }}"
+          $archiveName = "QMLKitConsole-${versionTag}-${{ matrix.target }}.zip"
+          Compress-Archive -Path "dist/QMLKitConsole" -DestinationPath "dist-artifacts/$archiveName"
+          Write-Host "Created Windows archive: dist-artifacts/$archiveName"
+
+      - name: Package Unix Binary (.tar.gz & .zip)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p dist-artifacts
+          VERSION_TAG="${{ needs.prep-release.outputs.tag }}"
+          TARGET="${{ matrix.target }}"
+          
+          # Set executable permissions on binary inside dist
+          chmod +x dist/QMLKitConsole/QMLKitConsole || true
+
+          # Create .tar.gz (preserves posix file modes)
+          tar -czf "dist-artifacts/QMLKitConsole-${VERSION_TAG}-${TARGET}.tar.gz" -C dist QMLKitConsole
+          
+          # Also create .zip for convenience
+          (cd dist && zip -r "../dist-artifacts/QMLKitConsole-${VERSION_TAG}-${TARGET}.zip" QMLKitConsole)
+          
+          ls -lh dist-artifacts/
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: dist-artifacts/*
+          retention-days: 1
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [prep-release, build-binaries]
+    if: needs.prep-release.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Release Notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: build-notes
+
+      - name: Download Binary Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: List Release Assets
+        shell: bash
+        run: |
+          echo "=== Release Assets to Upload ==="
+          ls -lh release-assets/
+          echo "=== Release Notes Preview ==="
+          cat build-notes/release_notes.md
+
       - name: Create GitHub Release (custom notes)
-        if: steps.notes.outputs.custom == 'true'
+        if: needs.prep-release.outputs.is_custom_notes == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: Release ${{ steps.version.outputs.tag }}
-          body_path: /tmp/release_notes.md
+          tag_name: ${{ needs.prep-release.outputs.tag }}
+          name: Release ${{ needs.prep-release.outputs.tag }}
+          body_path: build-notes/release_notes.md
+          files: release-assets/*
           generate_release_notes: false
           draft: false
           prerelease: false
@@ -363,27 +497,45 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release (autogenerated notes)
-        if: steps.notes.outputs.custom != 'true'
+        if: needs.prep-release.outputs.is_custom_notes != 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: Release ${{ steps.version.outputs.tag }}
-          generate_release_notes: true
+          tag_name: ${{ needs.prep-release.outputs.tag }}
+          name: Release ${{ needs.prep-release.outputs.tag }}
+          body_path: build-notes/release_notes.md
+          files: release-assets/*
+          generate_release_notes: false
           draft: false
           prerelease: false
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Summary
+      - name: Release Summary
         shell: bash
         run: |
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- Version: \`${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Tag: \`${{ steps.version.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Notes source: \`${{ steps.notes.outputs.custom == 'true' && 'releasenotes.properties (custom)' || 'autogenerated (GitHub API + git log)' }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Tag exists before: \`${{ steps.tagcheck.outputs.exists }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Body preview:" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          head -n 50 /tmp/release_notes.md >> $GITHUB_STEP_SUMMARY || echo "no body" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: \`${{ needs.prep-release.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: \`${{ needs.prep-release.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Notes Source**: \`${{ needs.prep-release.outputs.is_custom_notes == 'true' && 'releasenotes.properties (custom)' || 'autogenerated (GitHub API + git log)' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Compiled Runnable Binary Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Size | Platform |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          for f in release-assets/*; do
+            if [ -f "$f" ]; then
+              size=$(ls -lh "$f" | awk '{print $5}')
+              fname=$(basename "$f")
+              platform="Unknown"
+              if [[ "$fname" == *"windows"* ]]; then platform="Windows (x64)"; fi
+              if [[ "$fname" == *"macos-arm64"* ]]; then platform="macOS (Apple Silicon arm64)"; fi
+              if [[ "$fname" == *"macos-x64"* ]]; then platform="macOS (Intel x64)"; fi
+              if [[ "$fname" == *"linux"* ]]; then platform="Linux (x64)"; fi
+              echo "| \`$fname\` | $size | $platform |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Release Body Preview" >> $GITHUB_STEP_SUMMARY
+          echo '```markdown' >> $GITHUB_STEP_SUMMARY
+          head -n 50 build-notes/release_notes.md >> $GITHUB_STEP_SUMMARY || echo "no body" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

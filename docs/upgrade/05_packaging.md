@@ -35,7 +35,13 @@ overrides the embedded snapshot → UI hot-swappable without repackaging.
 Logs → `<app dir>/logs/qmlkit.log`. Optional Inno Setup installer script when
 ISCC.exe present.
 
-## E3. Release flow (optional parity)
+## E3. Release flow (Multi-platform runnable binaries)
 
-`version.properties` bump → CI builds installer → tagged release. Included as a
-documented stub only (no CI workflows in this pass).
+`.github/workflows/ci.yml` builds and packages runnable binaries across 3 matrix targets whenever `version.properties` is bumped on `main` (or on `workflow_dispatch`):
+
+- **Windows x64** (`windows-latest`): `QMLKitConsole-v<tag>-windows-x64.zip`
+- **macOS Apple Silicon arm64** (`macos-latest`): `QMLKitConsole-v<tag>-macos-arm64.tar.gz` & `.zip`
+- **macOS Intel x64** (`macos-13`): `QMLKitConsole-v<tag>-macos-x64.tar.gz` & `.zip`
+- **Linux x64** (`ubuntu-latest`): `QMLKitConsole-v<tag>-linux-x64.tar.gz` & `.zip`
+
+All compiled bundles are automatically attached as downloadable assets to the published GitHub Release with custom or smart auto-generated changelog notes.
