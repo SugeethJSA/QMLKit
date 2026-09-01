@@ -10,16 +10,17 @@ ROOT = Path(SPECPATH).resolve().parent
 
 block_cipher = None
 
+# Embedded frontend snapshot (external frontend_out/ overrides at runtime).
+frontend_out = ROOT / "frontend" / "out"
+datas = []
+if frontend_out.is_dir():
+    datas.append((str(frontend_out), "frontend_out"))
+
 a = Analysis(
     [str(ROOT / "qmlkit_desktop.py")],
     pathex=[str(ROOT / "src")],
     binaries=[],
-    datas=[
-        # Embedded frontend snapshot (external frontend_out/ overrides at runtime).
-        *((str(ROOT / "frontend" / "out"), "frontend_out"),)
-        if (ROOT / "frontend" / "out").is_dir()
-        else [],
-    ],
+    datas=datas,
     hiddenimports=[
         "uvicorn.logging",
         "uvicorn.loops",
