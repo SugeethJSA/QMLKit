@@ -34,10 +34,13 @@ a = Analysis(
         "uvicorn.lifespan",
         "uvicorn.lifespan.on",
         "qmlkit.api.kennel_server",
+        "qmlkit.api.server",
+        "torch",
+        "pennylane",
     ],
     hookspath=[],
     runtime_hooks=[],
-    excludes=["tkinter", "matplotlib", "seaborn", "torch", "pennylane"],
+    excludes=["tkinter"],
     cipher=block_cipher,
 )
 
