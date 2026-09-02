@@ -1,9 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller spec for the QMLKit desktop bundle (repomono GAIT methodology).
 # Build:  pyinstaller packaging/qmlkit_desktop.spec --noconfirm
-# Output: dist/QMLKitConsole/QMLKitConsole.exe  (onedir, windowed)
+# Output: dist/QMLKitConsole/QMLKitConsole[.exe] (onedir, windowed) and dist/QMLKitConsole.app on macOS
 
 import os
+import sys
 from pathlib import Path
 
 ROOT = Path(SPECPATH).resolve().parent
@@ -63,3 +64,19 @@ coll = COLLECT(
     upx=False,
     name="QMLKitConsole",
 )
+
+if sys.platform == "darwin":
+    app = BUNDLE(
+        coll,
+        name="QMLKitConsole.app",
+        bundle_identifier="com.qmlkit.console",
+        info_plist={
+            "CFBundleName": "QMLKit Console",
+            "CFBundleDisplayName": "QMLKit Console",
+            "CFBundleIdentifier": "com.qmlkit.console",
+            "CFBundleVersion": "0.1.0",
+            "CFBundlePackageType": "APPL",
+            "CFBundleSignature": "????",
+            "NSHighResolutionCapable": "True",
+        },
+    )

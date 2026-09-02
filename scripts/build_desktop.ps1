@@ -33,11 +33,19 @@ Write-Host "[OK] Bundle ready: $out" -ForegroundColor Green
 # Optional installer when Inno Setup is present.
 $isccCandidates = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-    "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+    "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+    "${env:LOCALAPPDATA}\Programs\Inno Setup 6\ISCC.exe"
 )
 $iscc = $isccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if ($iscc -and (Test-Path "packaging/installer/qmlkit.iss")) {
-    Write-Host "==> Building installer with Inno Setup"
-    & $iscc "packaging/installer/qmlkit.iss"
-    Write-Host "[OK] Installer under dist/installer/" -ForegroundColor Green
+    Write-Host "==> Building installer with Inno Setup" -ForegroundColor Cyan
+    $ver = "0.1.0"
+    if (Test-Path "version.properties") {
+        $match = Select-String -Path "version.properties" -Pattern "^\s*version\s*=\s*(.+)$"
+        if ($match) { $ver = $match.Matches[0].Groups[1].Value.Trim() }
+    }
+    New-Item -ItemType Directory -Force -Path "dist-artifacts" | Out-Null
+    & $iscc "/DMyAppVersion=$ver" "packaging/installer/qmlkit.iss"
+    Write-Host "[OK] Installer ready in dist-artifacts/" -ForegroundColor Green
 }
+

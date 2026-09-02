@@ -1,7 +1,7 @@
 name: Release
 
 # Publish a GitHub Release whenever version.properties is updated.
-# - Compiles runnable binaries for Windows, macOS (Apple Silicon arm64 & Intel x64), and Linux.
+# - Compiles native app installers for Windows (.exe setup), macOS (.dmg installer), and Linux (.deb package + self-installer).
 # - If releasenotes.properties is ALSO changed in the same push, its content is used as the release body.
 # - Otherwise release notes are auto-generated smartly (GitHub generate-notes API + git log fallback).
 # Manual trigger via workflow_dispatch is also supported.
@@ -375,8 +375,6 @@ jobs:
             target: windows-x64
           - os: macos-latest
             target: macos-arm64
-          - os: macos-13
-            target: macos-x64
           - os: ubuntu-latest
             target: linux-x64
     steps:
@@ -415,36 +413,73 @@ jobs:
         run: |
           python -m PyInstaller packaging/qmlkit_desktop.spec --noconfirm --distpath dist --workpath build/pyinstaller
 
-      - name: Package Windows Binary (.zip)
+      # ----------------- WINDOWS INSTALLER & PORTABLE -----------------
+      - name: Install Inno Setup (Windows)
+        if: runner.os == 'Windows'
+        run: choco install innosetup --no-progress
+
+      - name: Build Windows Setup Wizard Installer (.exe) & Portable Zip
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist-artifacts
-          $versionTag = "${{ needs.prep-release.outputs.tag }}"
-          $archiveName = "QMLKitConsole-${versionTag}-${{ matrix.target }}.zip"
-          Compress-Archive -Path "dist/QMLKitConsole" -DestinationPath "dist-artifacts/$archiveName"
-          Write-Host "Created Windows archive: dist-artifacts/$archiveName"
+          $ver = "${{ needs.prep-release.outputs.version }}"
+          $tag = "${{ needs.prep-release.outputs.tag }}"
+          
+          # 1) Inno Setup Compiler
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          }
+          Write-Host "Compiling Windows installer with: $iscc"
+          & $iscc "/DMyAppVersion=$ver" "packaging/installer/qmlkit.iss"
+          
+          # 2) Portable Zip
+          Compress-Archive -Path "dist/QMLKitConsole" -DestinationPath "dist-artifacts/QMLKitConsole-${tag}-windows-x64-portable.zip"
+          
+          Get-ChildItem dist-artifacts/
 
-      - name: Package Unix Binary (.tar.gz & .zip)
-        if: runner.os != 'Windows'
+      # ----------------- MACOS DMG INSTALLER & ZIP -----------------
+      - name: Build macOS Drag-and-Drop (.dmg) Installer & App Archive
+        if: runner.os == 'macOS'
         shell: bash
         run: |
           mkdir -p dist-artifacts
           VERSION_TAG="${{ needs.prep-release.outputs.tag }}"
           TARGET="${{ matrix.target }}"
           
-          # Set executable permissions on binary inside dist
-          chmod +x dist/QMLKitConsole/QMLKitConsole || true
+          # 1) Build .dmg with Applications symlink for drag-and-drop install
+          DMG_TMP="$(mktemp -d)"
+          cp -R "dist/QMLKitConsole.app" "$DMG_TMP/"
+          ln -s /Applications "$DMG_TMP/Applications"
+          hdiutil create -volname "QMLKit Console" -srcfolder "$DMG_TMP" -ov -format UDZO "dist-artifacts/QMLKitConsole-${VERSION_TAG}-${TARGET}.dmg"
+          rm -rf "$DMG_TMP"
 
-          # Create .tar.gz (preserves posix file modes)
-          tar -czf "dist-artifacts/QMLKitConsole-${VERSION_TAG}-${TARGET}.tar.gz" -C dist QMLKitConsole
-          
-          # Also create .zip for convenience
-          (cd dist && zip -r "../dist-artifacts/QMLKitConsole-${VERSION_TAG}-${TARGET}.zip" QMLKitConsole)
+          # 2) App bundle Zip
+          (cd dist && zip -r -y "../dist-artifacts/QMLKitConsole-${VERSION_TAG}-${TARGET}-app.zip" QMLKitConsole.app)
           
           ls -lh dist-artifacts/
 
-      - name: Upload Binary Artifact
+      # ----------------- LINUX DEB PACKAGE & TARBALL -----------------
+      - name: Build Linux Debian (.deb) Package & Universal Tarball Installer
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          mkdir -p dist-artifacts
+          VERSION="${{ needs.prep-release.outputs.version }}"
+          VERSION_TAG="${{ needs.prep-release.outputs.tag }}"
+          
+          # 1) Build native Debian (.deb) package
+          bash packaging/linux/build_deb.sh "$VERSION" "dist/QMLKitConsole" "dist-artifacts"
+          
+          # 2) Self-installing Universal Tarball with install.sh/uninstall.sh
+          cp packaging/linux/install.sh packaging/linux/uninstall.sh dist/QMLKitConsole/
+          chmod +x dist/QMLKitConsole/install.sh dist/QMLKitConsole/uninstall.sh dist/QMLKitConsole/QMLKitConsole
+          tar -czf "dist-artifacts/QMLKitConsole-${VERSION_TAG}-linux-x64.tar.gz" -C dist QMLKitConsole
+          
+          ls -lh dist-artifacts/
+
+      - name: Upload Binary & Installer Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.target }}
@@ -466,7 +501,7 @@ jobs:
           name: release-notes
           path: build-notes
 
-      - name: Download Binary Artifacts
+      - name: Download Binary & Installer Artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: binary-*
@@ -519,19 +554,28 @@ jobs:
           echo "- **Tag**: \`${{ needs.prep-release.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Notes Source**: \`${{ needs.prep-release.outputs.is_custom_notes == 'true' && 'releasenotes.properties (custom)' || 'autogenerated (GitHub API + git log)' }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Compiled Runnable Binary Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "| File | Size | Platform |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "### Compiled Native Installers & Packages" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifact | Type | Target OS | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
           for f in release-assets/*; do
             if [ -f "$f" ]; then
-              size=$(ls -lh "$f" | awk '{print $5}')
               fname=$(basename "$f")
-              platform="Unknown"
-              if [[ "$fname" == *"windows"* ]]; then platform="Windows (x64)"; fi
-              if [[ "$fname" == *"macos-arm64"* ]]; then platform="macOS (Apple Silicon arm64)"; fi
-              if [[ "$fname" == *"macos-x64"* ]]; then platform="macOS (Intel x64)"; fi
-              if [[ "$fname" == *"linux"* ]]; then platform="Linux (x64)"; fi
-              echo "| \`$fname\` | $size | $platform |" >> $GITHUB_STEP_SUMMARY
+              size=$(ls -lh "$f" | awk '{print $5}')
+              if [[ "$fname" == *"-installer.exe" ]]; then
+                echo "| \`$fname\` ($size) | **Installer** | Windows (x64) | Inno Setup Graphical Setup Wizard (Start Menu & Desktop shortcuts) |" >> $GITHUB_STEP_SUMMARY
+              elif [[ "$fname" == *"-portable.zip" ]] && [[ "$fname" == *"windows"* ]]; then
+                echo "| \`$fname\` ($size) | Portable | Windows (x64) | Standalone portable folder (no install required) |" >> $GITHUB_STEP_SUMMARY
+              elif [[ "$fname" == *".dmg" ]]; then
+                echo "| \`$fname\` ($size) | **Installer** | macOS (Apple Silicon) | Native Drag-and-Drop Disk Image into \`/Applications\` |" >> $GITHUB_STEP_SUMMARY
+              elif [[ "$fname" == *"-app.zip" ]]; then
+                echo "| \`$fname\` ($size) | Bundle | macOS (Apple Silicon) | Standalone \`QMLKitConsole.app\` archive |" >> $GITHUB_STEP_SUMMARY
+              elif [[ "$fname" == *".deb" ]]; then
+                echo "| \`$fname\` ($size) | **Installer** | Linux (Ubuntu/Debian) | Native Debian package with App Launcher integration (\`dpkg -i\`) |" >> $GITHUB_STEP_SUMMARY
+              elif [[ "$fname" == *".tar.gz" ]]; then
+                echo "| \`$fname\` ($size) | Self-Installer | Linux (Universal) | Universal archive with self-install/uninstall scripts |" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "| \`$fname\` ($size) | Archive | Generic | Platform archive |" >> $GITHUB_STEP_SUMMARY
+              fi
             fi
           done
           echo "" >> $GITHUB_STEP_SUMMARY

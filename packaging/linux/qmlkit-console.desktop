@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=QMLKit Console
+GenericName=Hybrid Quantum ML Olfactory VOC Platform
+Comment=Hybrid Quantum ML Olfactory VOC Sensing & Kennel Diagnostics
+Exec=/opt/qmlkit/QMLKitConsole
+Terminal=false
+Categories=Science;MedicalSoftware;Education;Development;

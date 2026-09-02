@@ -35,13 +35,18 @@ overrides the embedded snapshot → UI hot-swappable without repackaging.
 Logs → `<app dir>/logs/qmlkit.log`. Optional Inno Setup installer script when
 ISCC.exe present.
 
-## E3. Release flow (Multi-platform runnable binaries)
+## E3. Release flow (Multi-platform native installers & packages)
 
-`.github/workflows/ci.yml` builds and packages runnable binaries across 3 matrix targets whenever `version.properties` is bumped on `main` (or on `workflow_dispatch`):
+`.github/workflows/ci.yml` compiles and packages native application installers and portable bundles across 3 matrix targets whenever `version.properties` is bumped on `main` (or on `workflow_dispatch`):
 
-- **Windows x64** (`windows-latest`): `QMLKitConsole-v<tag>-windows-x64.zip`
-- **macOS Apple Silicon arm64** (`macos-latest`): `QMLKitConsole-v<tag>-macos-arm64.tar.gz` & `.zip`
-- **macOS Intel x64** (`macos-13`): `QMLKitConsole-v<tag>-macos-x64.tar.gz` & `.zip`
-- **Linux x64** (`ubuntu-latest`): `QMLKitConsole-v<tag>-linux-x64.tar.gz` & `.zip`
+- **Windows x64** (`windows-latest`):
+  - **Installer**: `QMLKitConsole-v<tag>-windows-x64-installer.exe` (Inno Setup GUI wizard with Start Menu, Desktop shortcuts, and Uninstaller)
+  - **Portable**: `QMLKitConsole-v<tag>-windows-x64-portable.zip`
+- **macOS Apple Silicon arm64** (`macos-latest`):
+  - **Installer**: `QMLKitConsole-v<tag>-macos-arm64.dmg` (native drag-and-drop disk image into `/Applications`)
+  - **Bundle**: `QMLKitConsole-v<tag>-macos-arm64-app.zip` (standalone `QMLKitConsole.app` bundle)
+- **Linux x64** (`ubuntu-latest`):
+  - **Debian / Ubuntu Package**: `QMLKitConsole-v<tag>-linux-x64.deb` (`sudo dpkg -i`, installs to `/opt/qmlkit` with `.desktop` menu launcher integration)
+  - **Universal Self-Installer**: `QMLKitConsole-v<tag>-linux-x64.tar.gz` (includes `install.sh` and `uninstall.sh`)
 
-All compiled bundles are automatically attached as downloadable assets to the published GitHub Release with custom or smart auto-generated changelog notes.
+All compiled installers are automatically attached as downloadable assets to the published GitHub Release with custom or smart auto-generated changelog notes.
