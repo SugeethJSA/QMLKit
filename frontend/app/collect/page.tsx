@@ -3,19 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  AlertCircle,
   ArrowRight,
   CheckCircle2,
   Cpu,
   Database,
-  Download,
-  Flame,
-  Layers,
   Play,
-  RotateCw,
-  Sparkles,
   Square,
   Timer,
-  Zap,
 } from "lucide-react";
 import { getJson, postJson } from "@/lib/api";
 
@@ -35,11 +30,11 @@ interface KennelState {
 }
 
 const LABELS = [
-  { id: "cancer", name: "Malignant Target (Cancer Sample)", color: "text-rose-400" },
-  { id: "control", name: "Healthy / Negative Control", color: "text-emerald-400" },
-  { id: "benign", name: "Benign Tissue Biopsy", color: "text-amber-400" },
-  { id: "alert", name: "Alert / Investigative Posture", color: "text-purple-400" },
-  { id: "calm", name: "Resting Physiological Baseline", color: "text-indigo-400" },
+  { id: "cancer", name: "Malignant Target (Cancer Sample)" },
+  { id: "control", name: "Healthy / Negative Control" },
+  { id: "benign", name: "Benign Tissue Biopsy" },
+  { id: "alert", name: "Alert / Investigative Posture" },
+  { id: "calm", name: "Resting Physiological Baseline" },
 ];
 
 export default function CollectPage() {
@@ -71,6 +66,14 @@ export default function CollectPage() {
     recording && state?.recorder.target_s
       ? Math.min(1, state.recorder.elapsed_s / state.recorder.target_s)
       : 0;
+  const connectionText = !state
+    ? error
+      ? "Offline"
+      : "Connecting..."
+    : state.connected
+      ? "Online"
+      : "Offline";
+  const connectionTone = state?.connected ? "chip-good" : state || error ? "chip-bad" : "";
 
   async function start() {
     try {
@@ -96,69 +99,73 @@ export default function CollectPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="panel p-6 border-l-4 border-l-indigo-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Database className="w-5 h-5 text-indigo-400" />
-              Canine Data Lab &amp; Ground Truth Recorder
-            </h2>
-            <span className="quantum-badge">Session Ingestion</span>
-          </div>
-          <p className="text-sm text-gray-400 mt-1">
-            Capture calibrated sensor sessions with synchronized canine telemetry, IMU micro-movements, and VOC labels.
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="section-title">Canine data lab</h1>
+          <p className="muted" style={{ margin: 0, maxWidth: 720, fontSize: 14 }}>
+            Capture calibrated sensor sessions with synchronized canine telemetry, IMU micro-movements, and VOC
+            labels.
           </p>
         </div>
-
-        <Link
-          href="/train"
-          className="px-4 py-2 rounded-xl bg-purple-600/30 hover:bg-purple-600/40 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center gap-1.5 transition shrink-0"
-        >
-          <Cpu className="w-3.5 h-3.5 text-purple-400" />
-          <span>Go to Training Studio →</span>
+        <Link href="/train" className="btn-quiet" style={{ alignSelf: "flex-start", textDecoration: "none" }}>
+          <Cpu size={16} />
+          Training studio
+          <ArrowRight size={15} />
         </Link>
-      </div>
+      </header>
+
+      <hr className="divider" />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Recording Controls (6 cols) */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="panel p-6 space-y-5">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2 border-b border-white/5 pb-3">
-              <Timer className="w-4 h-4 text-indigo-400" />
-              Session Parameters
-            </h3>
+        {/* Recording controls */}
+        <section className="lg:col-span-7">
+          <div className="surface flex flex-col gap-5">
+            <div className="row">
+              <h2 className="section-title flex items-center gap-2">
+                <Timer size={18} /> Session parameters
+              </h2>
+              <span className="chip">Session ingestion</span>
+            </div>
+            <hr className="divider" />
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-300">Canine Subject ID</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="label" htmlFor="dog-id">
+                  Canine subject ID
+                </label>
                 <input
+                  id="dog-id"
+                  className="field"
                   value={dogId}
                   onChange={(e) => setDogId(e.target.value)}
-                  className="w-full bg-[#0b0f19] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none font-mono"
                   placeholder="e.g. Rex, Luna"
                 />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-300">Specimen / Trial ID</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="label" htmlFor="sample-id">
+                  Specimen / trial ID
+                </label>
                 <input
+                  id="sample-id"
+                  className="field"
                   value={sampleId}
                   onChange={(e) => setSampleId(e.target.value)}
-                  className="w-full bg-[#0b0f19] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none font-mono"
                   placeholder="e.g. S0, S1"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-300">Biological Class Label</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="label" htmlFor="label">
+                  Biological class label
+                </label>
                 <select
+                  id="label"
+                  className="field"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  className="w-full bg-[#0b0f19] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
                 >
                   {LABELS.map((l) => (
                     <option key={l.id} value={l.id}>
@@ -167,136 +174,155 @@ export default function CollectPage() {
                   ))}
                 </select>
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-300">Window Duration (seconds)</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="label" htmlFor="duration">
+                  Window duration (seconds)
+                </label>
                 <input
+                  id="duration"
                   type="number"
                   min={5}
                   max={300}
+                  className="field"
                   value={duration}
                   onChange={(e) => setDuration(Number(e.target.value))}
-                  className="w-full bg-[#0b0f19] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
                 />
               </div>
             </div>
 
-            {/* Record Action Buttons */}
+            <hr className="divider" />
+
             {!recording ? (
-              <button
-                onClick={start}
-                className="w-full py-3.5 rounded-xl quantum-btn flex items-center justify-center gap-2 text-sm font-bold mt-2"
-              >
-                <Play className="w-4 h-4 fill-white" />
-                <span>Start Guided Recording Session ({duration}s)</span>
+              <button type="button" onClick={start} className="btn-primary w-full">
+                <Play size={16} />
+                Start Guided Recording Session ({duration}s)
               </button>
             ) : (
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-amber-400 font-bold flex items-center gap-1.5 animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-red-500" />
-                    Recording Active ({state?.recorder.label})
+              <div className="flex flex-col gap-3">
+                <div className="row flex-wrap gap-3">
+                  <span className="chip chip-warn">
+                    <span
+                      style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--warn)" }}
+                      aria-hidden="true"
+                    />
+                    Recording · {state?.recorder.label}
                   </span>
-                  <span className="font-mono text-gray-300">
+                  <span className="num muted" style={{ fontSize: 13 }}>
                     {state?.recorder.elapsed_s}s / {state?.recorder.target_s}s
                   </span>
                 </div>
-
-                <div className="h-3 bg-[#0b0f19] rounded-full overflow-hidden border border-white/10 p-0.5">
-                  <div
-                    className="h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${progress * 100}%`,
-                      background: "linear-gradient(90deg, #6366f1, #a855f7, #ec4899)",
-                    }}
-                  />
+                <div className="progress">
+                  <div className="progress-fill" style={{ width: `${progress * 100}%` }} />
                 </div>
-
-                <div className="text-xs text-gray-400 text-center font-mono">
-                  Ingested {state?.recorder.samples} sensor frames for subject {state?.recorder.dog_id}
-                </div>
-
+                <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+                  Ingested{" "}
+                  <span className="num" style={{ color: "var(--ink)", fontWeight: 700 }}>
+                    {state?.recorder.samples}
+                  </span>{" "}
+                  sensor frames for subject{" "}
+                  <strong style={{ color: "var(--ink)" }}>{state?.recorder.dog_id}</strong>
+                </p>
                 <button
+                  type="button"
                   onClick={stop}
-                  className="w-full py-3 rounded-xl bg-rose-600/90 hover:bg-rose-600 text-white font-bold text-sm transition flex items-center justify-center gap-2"
+                  className="btn-quiet w-full"
+                  style={{ color: "var(--bad)", borderColor: "var(--bad)" }}
                 >
-                  <Square className="w-4 h-4 fill-white" />
-                  <span>Stop &amp; Save Session</span>
+                  <Square size={16} />
+                  Stop &amp; Save Session
                 </button>
               </div>
             )}
 
-            {lastSaved && (
-              <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>Session saved successfully to: <code>{lastSaved}</code></span>
-              </div>
-            )}
-
             {error && (
-              <div className="p-3 bg-rose-950/40 border border-rose-500/40 rounded-xl text-rose-300 text-xs">
-                {error}
+              <div className="surface-sm row" style={{ borderLeft: "3px solid var(--bad)", color: "var(--bad)" }} role="alert">
+                <AlertCircle size={18} />
+                <span>{error}</span>
               </div>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* Right Column: Live Sensor Telemetry & Stats (5 cols) */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="panel p-5 space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2 border-b border-white/5 pb-3">
-              <Zap className="w-4 h-4 text-emerald-400" />
-              Ingestion Telemetry
-            </h3>
+        {/* Telemetry and sessions */}
+        <aside className="lg:col-span-5 flex flex-col gap-6">
+          <div className="surface flex flex-col gap-5">
+            <div className="row">
+              <h2 className="section-title flex items-center gap-2">
+                <Database size={18} /> Ingestion telemetry
+              </h2>
+              <span className={`chip ${connectionTone}`}>{connectionText}</span>
+            </div>
+            <hr className="divider" />
 
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="p-3 bg-[#0b0f19] border border-white/5 rounded-xl">
-                <span className="text-[10px] text-gray-400 uppercase block">Stream Source</span>
-                <span className="text-sm font-bold text-white mt-1 block font-mono">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+              <div className="flex flex-col gap-1">
+                <span className="label">Stream source</span>
+                <span style={{ fontWeight: 800, overflowWrap: "anywhere" }}>
                   {state?.stream_source ?? "Local Sim"}
                 </span>
               </div>
-
-              <div className="p-3 bg-[#0b0f19] border border-white/5 rounded-xl">
-                <span className="text-[10px] text-gray-400 uppercase block">Total Frames Seen</span>
-                <span className="text-sm font-bold text-indigo-400 mt-1 block font-mono">
-                  {state?.frames_seen?.toLocaleString() ?? "0"}
+              <div className="flex flex-col gap-1">
+                <span className="label">Total frames seen</span>
+                <span className="num" style={{ fontWeight: 800 }}>
+                  {state?.frames_seen?.toLocaleString() ?? "—"}
                 </span>
               </div>
-
-              <div className="p-3 bg-[#0b0f19] border border-white/5 rounded-xl">
-                <span className="text-[10px] text-gray-400 uppercase block">Diagnostic State</span>
-                <span className="text-sm font-bold text-purple-400 mt-1 block capitalize">
-                  {state?.model_status ?? "Ready"}
+              <div className="flex flex-col gap-1">
+                <span className="label">Diagnostic state</span>
+                <span style={{ fontWeight: 800, textTransform: "capitalize" }}>
+                  {state?.model_status ?? "Checking..."}
                 </span>
               </div>
-
-              <div className="p-3 bg-[#0b0f19] border border-white/5 rounded-xl">
-                <span className="text-[10px] text-gray-400 uppercase block">Connection</span>
-                <span className="text-sm font-bold text-emerald-400 mt-1 block">
-                  {state?.connected ? "Online" : "Active"}
+              <div className="flex flex-col gap-1">
+                <span className="label">Connection</span>
+                <span className={`chip ${connectionTone}`} style={{ alignSelf: "flex-start" }}>
+                  {connectionText}
                 </span>
               </div>
             </div>
 
-            <div className="p-4 bg-purple-950/20 border border-purple-500/20 rounded-xl space-y-2 text-xs text-gray-300">
-              <div className="font-semibold text-purple-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Next Step: Quantum Model Training</span>
-              </div>
-              <p className="leading-relaxed">
-                After recording sessions across cancer and control cohorts, invoke in-browser quantum training to train a BioZZ QSVM or VQC classifier.
-              </p>
-              <Link
-                href="/train"
-                className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300 font-semibold mt-1"
-              >
-                <span>Launch Training Studio</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
+            <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+              Kennel state is polled once per second. Local Sim is the simulation fallback used when hardware is
+              absent.
+            </p>
           </div>
-        </div>
+
+          <div className="surface flex flex-col gap-4">
+            <h2 className="section-title">Recent sessions</h2>
+            <hr className="divider" />
+            {lastSaved ? (
+              <div className="flex items-start gap-3" style={{ color: "var(--good)" }}>
+                <CheckCircle2 size={18} />
+                <div className="flex flex-col gap-1">
+                  <span style={{ fontWeight: 800 }}>Last session saved</span>
+                  <code className="num" style={{ fontSize: 12, color: "var(--ink)", overflowWrap: "anywhere" }}>
+                    {lastSaved}
+                  </code>
+                </div>
+              </div>
+            ) : (
+              <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+                No sessions saved in this view yet. Start and stop a guided recording to see its saved path here.
+              </p>
+            )}
+          </div>
+
+          <div className="surface-sm flex flex-col gap-2">
+            <strong style={{ fontSize: 14 }}>Next step: quantum model training</strong>
+            <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+              After recording sessions across cancer and control cohorts, invoke in-browser quantum training to
+              train a BioZZ QSVM or VQC classifier.
+            </p>
+            <Link
+              href="/train"
+              className="inline-flex items-center gap-2"
+              style={{ color: "var(--action)", fontWeight: 800, textDecoration: "none", fontSize: 13 }}
+            >
+              Launch Training Studio
+              <ArrowRight size={15} />
+            </Link>
+          </div>
+        </aside>
       </div>
     </div>
   );

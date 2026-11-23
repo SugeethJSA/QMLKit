@@ -19,7 +19,7 @@ An integrated, packagable screening platform combining **three subsystems**:
 2. **QML backend** (`src/qmlkit`) — leak-free benchmarking of quantum vs classical models on real VOC biomarker data (`docs/Lung_Cancer_VOC_Dataset_427.md`), plus live kennel ingestion (`src/qmlkit/hardware`) with windowed micro-movement features and Data-Lab session recording.
 3. **Next.js Console** (`frontend`) — live dashboard (kennel diagram, IMU waveforms, sensor bars), diagnostics view with confidence handling, and a guided recording lab.
 
-Packaging follows the **repomono/GAIT methodology**: pnpm workspace orchestration, PyInstaller onedir desktop bundle with embedded dashboard snapshot, PowerShell build scripts.
+Packaging follows the following technology: pnpm workspace orchestration, PyInstaller onedir desktop bundle with embedded dashboard snapshot, PowerShell build scripts.
 
 ---
 

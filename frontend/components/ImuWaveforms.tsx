@@ -31,10 +31,10 @@ export default function ImuWaveforms({ frame }: { frame: Frame | null }) {
     ctx.clearRect(0, 0, width, height);
 
     const series: [number[], string][] = [
-      [h.ax, "#818cf8"],
-      [h.ay, "#34d399"],
-      [h.az, "#fbbf24"],
-      [h.gx, "#f472b6"],
+      [h.ax, "#2f5fd2"],
+      [h.ay, "#2f7d5b"],
+      [h.az, "#a9681f"],
+      [h.gx, "#b23a2f"],
     ];
     const all = series.flatMap(([data]) => data);
     const min = Math.min(...all, -1);
@@ -68,9 +68,26 @@ export default function ImuWaveforms({ frame }: { frame: Frame | null }) {
   }, [frame]);
 
   return (
-    <div className="panel p-4">
-      <h3 className="font-semibold mb-2">Collar IMU — micro-movements</h3>
-      <canvas ref={canvasRef} width={560} height={180} className="w-full" />
+    <div className="surface p-5 stack gap-3">
+      <div className="stack gap-1">
+        <h3 className="section-title">Collar IMU · micro-movements</h3>
+        <p className="muted text-sm">Rolling ten-second window from the collar accelerometer and gyroscope.</p>
+      </div>
+      {frame ? (
+        <canvas
+          ref={canvasRef}
+          width={560}
+          height={180}
+          className="w-full"
+          role="img"
+          aria-label="Collar accelerometer and gyroscope waveforms, last ten seconds"
+        />
+      ) : (
+        <div className="stack gap-1">
+          <p className="muted text-sm">Waiting for telemetry…</p>
+          <p className="muted text-xs">Waveforms draw as collar frames arrive.</p>
+        </div>
+      )}
     </div>
   );
 }

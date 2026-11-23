@@ -4,18 +4,12 @@ import { useState } from "react";
 import {
   Activity,
   AlertTriangle,
-  ArrowRight,
-  CheckCircle2,
   Cpu,
-  Dna,
-  Download,
   Eye,
   FileText,
   FlaskConical,
-  Gauge,
   Play,
   RotateCw,
-  Sparkles,
 } from "lucide-react";
 import PredictionCard, { type Diagnostic } from "@/components/PredictionCard";
 import BiomarkerWaterfall, { type Biomarker } from "@/components/BiomarkerWaterfall";
@@ -39,15 +33,27 @@ const PRESETS = [
   { id: "colorectal_positive", name: "Colorectal Cancer (DMDS / Aromatic High)", type: "Malignant" },
 ];
 
+const COLOR = {
+  good: "#2f7d5b",
+  bad: "#b23a2f",
+  action: "#2f5fd2",
+  warn: "#a9681f",
+  line: "#e8e1d4",
+  goodTint: "#f4f8f6",
+  badTint: "#fbf3f1",
+};
+
 export default function DiagnosticsPage() {
   const [diag, setDiag] = useState<Diagnostic | null>(null);
-  const [history, setHistory] = useState<number[]>([0.15, 0.18, 0.12, 0.22, 0.19, 0.25, 0.82, 0.88, 0.85]);
+  // Honest default: no seeded history. Points only arrive from real messages/responses.
+  const [history, setHistory] = useState<number[]>([]);
   const [selectedPreset, setSelectedPreset] = useState("lung_positive");
   const [sampleId, setSampleId] = useState("SMPL_ONC_8892");
   const [patientAge, setPatientAge] = useState(62);
   const [smokingStatus, setSmokingStatus] = useState("Former");
   const [isRunning, setIsRunning] = useState(false);
   const [detailedResult, setDetailedResult] = useState<DetailedPrediction | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Live WebSocket diagnostic listener
   const connected = useTelemetrySocket<Diagnostic>("/ws/diagnostic", (d) => {
@@ -75,6 +81,7 @@ export default function DiagnosticsPage() {
 
   async function runQuantumDiagnostic() {
     setIsRunning(true);
+    setError(null);
     try {
       const sensorValues = getSensorPresetValues(selectedPreset);
       const res = await postJson<DetailedPrediction>("/api/v1/predict?deep_explain=true", {
@@ -87,88 +94,113 @@ export default function DiagnosticsPage() {
       setDetailedResult(res);
       setHistory((h) => [...h.slice(-59), res.cancer_probability]);
     } catch (err) {
-      alert("Diagnostic execution error: " + err);
+      const reason = err instanceof Error ? err.message : String(err);
+      setError(
+        `The screening request could not be completed (${reason}). Check that the API host is reachable — append ?api=http://host:port to this URL when the console is opened from another machine — then try again.`
+      );
     } finally {
       setIsRunning(false);
     }
   }
 
+  const riskPct = detailedResult
+    ? Math.min(100, Math.max(0, detailedResult.cancer_probability * 100))
+    : 0;
+  const highRisk = detailedResult ? detailedResult.cancer_probability >= 0.5 : false;
+  const resultTone = highRisk ? COLOR.bad : COLOR.good;
+  const resultTint = highRisk ? COLOR.badTint : COLOR.goodTint;
+  const chartPoints =
+    history.length >= 2
+      ? history
+          .map((v, i) => `${(i / (history.length - 1)) * 296 + 2},${118 - v * 116}`)
+          .join(" ")
+      : "";
+
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="panel p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-purple-500">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Eye className="w-5 h-5 text-purple-400" />
-              Oncological VOC Screening &amp; Explainability
-            </h2>
-            <span className="quantum-badge">Quantum SHAP</span>
+    <div className="stack gap-6">
+      <div className="surface row items-center justify-between gap-4">
+        <div className="stack gap-1">
+          <div className="row items-center gap-2">
+            <Eye width={20} height={20} style={{ color: COLOR.action }} aria-hidden="true" />
+            <h1 className="section-title">Oncological VOC screening &amp; explainability</h1>
           </div>
-          <p className="text-sm text-gray-400 mt-1">
-            BioZZ Quantum Kernel evaluation of volatile organic biomarkers with reverse Hilbert space attribution.
+          <p className="muted">
+            BioZZ quantum-kernel attribution over volatile organic biomarker vectors. Research aid — not a
+            validated clinical device.
           </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <span className={`w-2.5 h-2.5 rounded-full ${connected ? "bg-emerald-400" : "bg-gray-500"}`} />
-          <span className="text-xs text-gray-400">
-            {connected ? "Live Stream Synced" : "On-Demand Diagnostic Mode"}
+        <div className="row items-center gap-2">
+          <span className={`chip ${connected ? "chip-good" : ""}`}>
+            {connected ? "Live stream connected" : "On-demand mode"}
           </span>
         </div>
       </div>
 
-      {/* Main Grid: Left Controls & Sample Ingestion | Right Diagnostics & Waterfall */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Sample Selector & Ingestion Form (4 cols) */}
-        <div className="lg:col-span-4 space-y-4">
-          <div className="panel p-5 space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2 border-b border-white/5 pb-3">
-              <FlaskConical className="w-4 h-4 text-purple-400" />
-              Specimen Ingestion
-            </h3>
+        {/* Controls and specimen input */}
+        <div className="lg:col-span-4 stack gap-4">
+          <div className="surface stack gap-4">
+            <h2 className="section-title row items-center gap-2">
+              <FlaskConical width={18} height={18} style={{ color: COLOR.action }} aria-hidden="true" />
+              Specimen input
+            </h2>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-300">Specimen Identifier</label>
+            <div className="stack gap-1">
+              <label className="label" htmlFor="sample-id">
+                Specimen identifier
+              </label>
               <input
+                id="sample-id"
                 type="text"
                 value={sampleId}
                 onChange={(e) => setSampleId(e.target.value)}
-                className="w-full bg-[#0b0f19] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none font-mono"
+                className="field num"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-300">Patient Age</label>
+              <div className="stack gap-1">
+                <label className="label" htmlFor="patient-age">
+                  Patient age
+                </label>
                 <input
+                  id="patient-age"
                   type="number"
                   value={patientAge}
                   onChange={(e) => setPatientAge(parseInt(e.target.value))}
-                  className="w-full bg-[#0b0f19] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+                  className="field num"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-300">Smoking Status</label>
+              <div className="stack gap-1">
+                <label className="label" htmlFor="smoking-status">
+                  Smoking status
+                </label>
                 <select
+                  id="smoking-status"
                   value={smokingStatus}
                   onChange={(e) => setSmokingStatus(e.target.value)}
-                  className="w-full bg-[#0b0f19] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+                  className="field"
                 >
-                  <option value="Former">Former Smoker</option>
-                  <option value="Current">Current Smoker</option>
-                  <option value="Never">Never Smoker</option>
+                  <option value="Former">Former smoker</option>
+                  <option value="Current">Current smoker</option>
+                  <option value="Never">Never smoker</option>
                 </select>
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-300">Canine Olfactory Sensor Preset</label>
+            <div className="stack gap-1">
+              <div className="row items-center justify-between gap-2">
+                <label className="label" htmlFor="sensor-preset">
+                  Sensor preset
+                </label>
+                <span className="chip chip-warn">Synthetic preset</span>
+              </div>
               <select
+                id="sensor-preset"
                 value={selectedPreset}
                 onChange={(e) => setSelectedPreset(e.target.value)}
-                className="w-full bg-[#0b0f19] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+                className="field"
               >
                 {PRESETS.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -176,143 +208,173 @@ export default function DiagnosticsPage() {
                   </option>
                 ))}
               </select>
+              <p className="muted" style={{ fontSize: 12 }}>
+                Preset vectors are generated for demonstration. They are not readings from a kennel node.
+              </p>
             </div>
 
             <button
+              type="button"
               onClick={runQuantumDiagnostic}
               disabled={isRunning}
-              className="w-full py-3 rounded-xl quantum-btn flex items-center justify-center gap-2 text-sm mt-2"
+              className="btn-primary row items-center justify-center gap-2"
             >
               {isRunning ? (
                 <>
-                  <RotateCw className="w-4 h-4 animate-spin" />
-                  <span>Evaluating Quantum Kernel...</span>
+                  <RotateCw width={16} height={16} aria-hidden="true" />
+                  <span>Evaluating…</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
-                  <span>Run Quantum Diagnostic</span>
+                  <Play width={16} height={16} aria-hidden="true" />
+                  <span>Run screening</span>
                 </>
               )}
             </button>
           </div>
 
-          {/* Quick Info Panel */}
-          <div className="panel p-4 text-xs text-gray-400 space-y-2 border-dashed">
-            <div className="flex items-center gap-2 text-purple-300 font-semibold">
-              <Cpu className="w-3.5 h-3.5" />
-              <span>BioZZ Quantum Feature Mapping</span>
+          <div className="surface-sm stack gap-2">
+            <div className="row items-center gap-2">
+              <Cpu width={16} height={16} style={{ color: COLOR.action }} aria-hidden="true" />
+              <h2 className="label" style={{ fontWeight: 600 }}>
+                How attribution works
+              </h2>
             </div>
-            <p className="leading-relaxed">
-              Patient sensor transient vectors are encoded via angle rotations and multi-qubit entangling gates (Rz phase shifts), projecting into a 2^n high-dimensional Hilbert space.
+            <p className="muted">
+              Sensor transients are encoded as rotation angles and entangling gates, then projected into a
+              higher-dimensional feature space. Attribution ranks which input dimensions moved the model
+              output.
             </p>
           </div>
+
+          {error ? (
+            <div
+              className="surface stack gap-2"
+              role="alert"
+              style={{ border: `1px solid ${COLOR.bad}`, backgroundColor: COLOR.badTint }}
+            >
+              <div className="row items-center gap-2">
+                <AlertTriangle width={18} height={18} style={{ color: COLOR.bad }} aria-hidden="true" />
+                <h2 className="label" style={{ color: COLOR.bad, fontWeight: 600 }}>
+                  Screening could not run
+                </h2>
+              </div>
+              <p className="muted">{error}</p>
+              <button type="button" className="btn-quiet" style={{ alignSelf: "flex-start" }} onClick={runQuantumDiagnostic}>
+                Try again
+              </button>
+            </div>
+          ) : null}
         </div>
 
-        {/* Right Column: Prediction, Waterfall & Risk History (8 cols) */}
-        <div className="lg:col-span-8 space-y-6">
+        {/* Results */}
+        <div className="lg:col-span-8 stack gap-6">
           {detailedResult ? (
-            <div className="space-y-6">
-              {/* Top Result Banner */}
+            <div className="stack gap-6">
               <div
-                className={`panel p-6 border-l-4 ${
-                  detailedResult.cancer_probability >= 0.5 ? "border-l-rose-500" : "border-l-emerald-500"
-                }`}
+                className="surface stack gap-4"
+                style={{ border: `1px solid ${resultTone}`, backgroundColor: resultTint }}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
-                          detailedResult.cancer_probability >= 0.5
-                            ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                            : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                        }`}
-                      >
-                        {detailedResult.prediction}
-                      </span>
-                      <span className="text-xs text-gray-400 font-mono">ID: {detailedResult.sample_id}</span>
-                    </div>
-                    <h3 className="text-2xl font-extrabold text-white mt-1">
-                      {(detailedResult.cancer_probability * 100).toFixed(1)}% Malignancy Risk Index
-                    </h3>
-                  </div>
+                <div className="row items-center justify-between gap-3">
+                  <span className={`chip ${highRisk ? "chip-bad" : "chip-good"}`}>
+                    {detailedResult.prediction}
+                  </span>
+                  <span className="muted num">ID {detailedResult.sample_id}</span>
+                </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <span className="text-[10px] text-gray-400 uppercase block">Quantum Confidence</span>
-                      <span className="text-lg font-bold text-purple-400 font-mono">
-                        {detailedResult.quantum_confidence_pct}%
-                      </span>
-                    </div>
+                <div className="row items-end justify-between gap-4">
+                  <div className="stack gap-1">
+                    <span className="num" style={{ color: resultTone, fontSize: 40, lineHeight: 1 }}>
+                      {riskPct.toFixed(1)}%
+                    </span>
+                    <span className="label">Malignancy risk index</span>
+                  </div>
+                  <div className="stack gap-1">
+                    <span className="num" style={{ color: COLOR.action }}>
+                      {detailedResult.quantum_confidence_pct}%
+                    </span>
+                    <span className="label">Quantum confidence</span>
                   </div>
                 </div>
 
-                {/* Progress bar */}
-                <div className="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden mt-4">
+                <div
+                  className="progress"
+                  role="progressbar"
+                  aria-label="Malignancy risk index"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Number(riskPct.toFixed(1))}
+                >
                   <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${detailedResult.cancer_probability * 100}%`,
-                      background:
-                        detailedResult.cancer_probability >= 0.5
-                          ? "linear-gradient(90deg, #f59e0b, #ef4444)"
-                          : "linear-gradient(90deg, #10b981, #06b6d4)",
-                    }}
+                    className="progress-fill"
+                    style={{ width: `${riskPct}%`, backgroundColor: resultTone }}
                   />
                 </div>
+
+                <p className="muted" style={{ fontSize: 12 }}>
+                  Computed from a synthetic preset request. Research aid — not a clinical result.
+                </p>
               </div>
 
-              {/* Biomarker Waterfall Attribution */}
-              <div className="panel p-6">
+              <div className="surface">
                 <BiomarkerWaterfall
                   biomarkers={detailedResult.top_biomarkers}
                   pathways={detailedResult.biochemical_pathways}
                 />
               </div>
 
-              {/* Oncologist Summary */}
-              <div className="panel p-5 bg-indigo-950/20 border border-indigo-500/30 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase text-indigo-300">
-                  <FileText className="w-4 h-4 text-indigo-400" />
-                  Clinical Oncologist Evaluation Summary
+              <div className="surface stack gap-2">
+                <div className="row items-center gap-2">
+                  <FileText width={16} height={16} style={{ color: COLOR.action }} aria-hidden="true" />
+                  <h2 className="label" style={{ fontWeight: 600 }}>
+                    Clinical review summary
+                  </h2>
                 </div>
-                <p className="text-xs text-gray-300 leading-relaxed font-sans">
-                  {detailedResult.clinical_summary}
-                </p>
+                <p className="muted">{detailedResult.clinical_summary}</p>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <PredictionCard diag={diag} />
 
-              <div className="panel p-6 space-y-3">
-                <h3 className="text-sm font-bold text-gray-300 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-purple-400" />
-                  Risk History (Last 60 Windows)
-                </h3>
-                <svg viewBox="0 0 300 120" className="w-full h-36">
-                  <line x1={0} y1={60} x2={300} y2={60} stroke="#374151" strokeDasharray="4 4" />
-                  <text x={4} y={14} fontSize={9} fill="#9ca3af">
-                    100%
-                  </text>
-                  <text x={4} y={64} fontSize={8} fill="#6b7280">
-                    Threshold (50%)
-                  </text>
-                  <text x={4} y={114} fontSize={9} fill="#9ca3af">
-                    0%
-                  </text>
-                  {(() => {
-                    const n = Math.max(history.length, 1);
-                    const pts = history
-                      .map((v, i) => `${(i / (n - 1 || 1)) * 296 + 2},${118 - v * 116}`)
-                      .join(" ");
-                    return <polyline points={pts} fill="none" stroke="#a855f7" strokeWidth={2.5} />;
-                  })()}
-                </svg>
-                <p className="text-[11px] text-gray-500">
-                  Real-time continuous rolling risk index window. Dashed line denotes 50% malignancy cutoff.
-                </p>
+              <div className="surface stack gap-3">
+                <div className="row items-center gap-2">
+                  <Activity width={16} height={16} style={{ color: COLOR.action }} aria-hidden="true" />
+                  <h2 className="section-title">Risk history</h2>
+                </div>
+
+                {history.length >= 2 ? (
+                  <>
+                    <svg
+                      viewBox="0 0 300 120"
+                      className="w-full"
+                      role="img"
+                      aria-label="Rolling malignancy risk across the most recent diagnostic windows"
+                    >
+                      <line x1={0} y1={60} x2={300} y2={60} stroke={COLOR.line} strokeDasharray="4 4" />
+                      <text x={4} y={14} fontSize={9} fill="#6c675f">
+                        100%
+                      </text>
+                      <text x={4} y={64} fontSize={8} fill="#6c675f">
+                        Cutoff 50%
+                      </text>
+                      <text x={4} y={114} fontSize={9} fill="#6c675f">
+                        0%
+                      </text>
+                      <polyline points={chartPoints} fill="none" stroke={COLOR.action} strokeWidth={2.5} />
+                    </svg>
+                    <p className="muted" style={{ fontSize: 12 }}>
+                      Last {history.length} windows. Dashed line marks the 50% cutoff.
+                    </p>
+                  </>
+                ) : (
+                  <div className="surface-sm row items-center" style={{ border: "1px dashed #e8e1d4" }}>
+                    <p className="muted">
+                      No diagnostic windows recorded yet. Run a screening or wait for the live stream; points
+                      appear here as results arrive.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-22T00:00:00.000Z",
+  "title": "Design System: QMLKit",
+  "extensions": {
+    "colorMeta": {
+      "ground": { "role": "neutral", "displayName": "Warm Ground", "canonical": "#f6f1e8", "tonalRamp": ["#5d5c58", "#94918b", "#c5c1ba", "#f6f1e8", "#f8f4ed", "#faf7f1", "#fcfaf7", "#fefdfc"] },
+      "surface": { "role": "neutral", "displayName": "Surface White", "canonical": "#ffffff", "tonalRamp": ["#616161", "#999999", "#cccccc", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff"] },
+      "surface-tint": { "role": "neutral", "displayName": "Tinted White", "canonical": "#fbf8f2", "tonalRamp": ["#5f5e5c", "#979591", "#c9c6c2", "#fbf8f2", "#fcf9f5", "#fdfbf7", "#fefdfa", "#fefefd"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#22201d", "tonalRamp": ["#0d0c0b", "#141311", "#1b1a17", "#22201d", "#4e4d4a", "#7a7977", "#b2b1b0", "#dededd"] },
+      "muted": { "role": "neutral", "displayName": "Muted Ink", "canonical": "#6c675f", "tonalRamp": ["#292724", "#413e39", "#56524c", "#6c675f", "#89857f", "#a7a49f", "#cccac7", "#e9e8e7"] },
+      "line": { "role": "neutral", "displayName": "Hairline", "canonical": "#e8e1d4", "tonalRamp": ["#585651", "#8b877f", "#bab4aa", "#e8e1d4", "#ede7dd", "#f1ede5", "#f7f5f0", "#fcfbf9"] },
+      "line-strong": { "role": "neutral", "displayName": "Hairline Strong", "canonical": "#d9cfbd", "tonalRamp": ["#524f48", "#827c71", "#aea697", "#d9cfbd", "#e1d9ca", "#e8e2d7", "#f2eee8", "#f9f8f5"] },
+      "action": { "role": "primary", "displayName": "Action Indigo", "canonical": "#2f5fd2", "tonalRamp": ["#122450", "#1c397e", "#264ca8", "#2f5fd2", "#597fdb", "#829fe4", "#b6c7ef", "#e0e7f8"] },
+      "action-hover": { "role": "primary", "displayName": "Action Indigo Deep", "canonical": "#244bb0", "tonalRamp": ["#0e1d43", "#162d6a", "#1d3c8d", "#244bb0", "#506fc0", "#7c93d0", "#b2c0e3", "#dee4f3"] },
+      "action-tint": { "role": "primary", "displayName": "Action Indigo Wash", "canonical": "#eaf0ff", "tonalRamp": ["#595b61", "#8c9099", "#bbc0cc", "#eaf0ff", "#eef3ff", "#f2f6ff", "#f8faff", "#fcfdff"] },
+      "good": { "role": "semantic", "displayName": "Good Green", "canonical": "#2f7d5b", "tonalRamp": ["#123023", "#1c4b37", "#266449", "#2f7d5b", "#59977c", "#82b19d", "#b6d2c6", "#e0ece6"] },
+      "good-tint": { "role": "semantic", "displayName": "Good Green Wash", "canonical": "#e6f4ec", "tonalRamp": ["#575d5a", "#8a928e", "#b8c3bd", "#e6f4ec", "#ebf6f0", "#f0f8f4", "#f6fbf8", "#fbfdfc"] },
+      "warn": { "role": "semantic", "displayName": "Warn Amber", "canonical": "#a9681f", "tonalRamp": ["#40280c", "#653e13", "#875319", "#a9681f", "#ba864c", "#cba479", "#e1cab1", "#f2e8dd"] },
+      "warn-tint": { "role": "semantic", "displayName": "Warn Amber Wash", "canonical": "#fbf1e0", "tonalRamp": ["#5f5c55", "#979186", "#c9c1b3", "#fbf1e0", "#fcf4e6", "#fdf7ec", "#fefaf4", "#fefdfa"] },
+      "bad": { "role": "semantic", "displayName": "Bad Red", "canonical": "#b23a2f", "tonalRamp": ["#441612", "#6b231c", "#8e2e26", "#b23a2f", "#c16159", "#d18982", "#e4bab6", "#f3e1e0"] },
+      "bad-tint": { "role": "semantic", "displayName": "Bad Red Wash", "canonical": "#fbeae7", "tonalRamp": ["#5f5958", "#978c8b", "#c9bbb9", "#fbeae7", "#fceeec", "#fdf2f1", "#fef8f7", "#fefcfb"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Wordmark", "purpose": "QMLKit brand in the header only; 22px/800, tight -0.03em tracking." },
+      "headline": { "displayName": "Section Title", "purpose": "Panel and page headings via .section-title; 18px/800." },
+      "body": { "displayName": "Body", "purpose": "Window copy, helper text, and table cells; 15px/1.5." },
+      "label": { "displayName": "Label", "purpose": "Uppercase tracked form labels and data captions via .label; 12px/700." },
+      "metric": { "displayName": "Metric", "purpose": "Large tabular risk/index numerals; 40–44px/800." }
+    },
+    "shadows": [
+      { "name": "soft-surface-lift", "value": "0 6px 20px -6px rgba(34, 32, 29, 0.12), 0 2px 6px -2px rgba(34, 32, 29, 0.06)", "purpose": "Single diffuse lift on primary .surface cards; .surface-sm stays flat." }
+    ],
+    "motion": [
+      { "name": "press", "value": "transform 180ms cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "The only motion: a scale(0.97) press on buttons; removed under prefers-reduced-motion." },
+      { "name": "state", "value": "background 160ms ease, border-color 160ms ease, color 160ms ease", "purpose": "Colour state changes on buttons; 120ms linear when reduced motion is requested." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "compact", "value": "900px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single indigo action control for the primary next step.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Run screening</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 20px; border:1px solid transparent; border-radius:999px; background:var(--action, #2f5fd2); color:#ffffff; font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif; font-size:14px; font-weight:800; cursor:pointer; transition:background 160ms ease, transform 180ms cubic-bezier(0.22,1,0.36,1); } .ds-btn-primary:hover { background:var(--action-hover, #244bb0); } .ds-btn-primary:focus-visible { outline:3px solid var(--action, #2f5fd2); outline-offset:2px; } .ds-btn-primary:active:not(:disabled) { transform:scale(0.97); } .ds-btn-primary:disabled { opacity:0.5; cursor:not-allowed; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Secondary action: white surface, hairline border, ink text.",
+      "html": "<button class=\"ds-btn-quiet\" type=\"button\">Review diagnostics</button>",
+      "css": ".ds-btn-quiet { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 20px; border:1px solid var(--line-strong, #d9cfbd); border-radius:999px; background:var(--surface, #ffffff); color:var(--ink, #22201d); font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif; font-size:14px; font-weight:800; cursor:pointer; transition:background 160ms ease, border-color 160ms ease, transform 180ms cubic-bezier(0.22,1,0.36,1); } .ds-btn-quiet:hover { background:var(--surface-tint, #fbf8f2); } .ds-btn-quiet:focus-visible { outline:3px solid var(--action, #2f5fd2); outline-offset:2px; } .ds-btn-quiet:active:not(:disabled) { transform:scale(0.97); } .ds-btn-quiet:disabled { opacity:0.5; cursor:not-allowed; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Standard input/select with 10px corners and an action focus halo.",
+      "html": "<label class=\"ds-field-label\" for=\"ds-sample\">Specimen identifier</label><input id=\"ds-sample\" class=\"ds-field\" type=\"text\" placeholder=\"SMPL_ONC_8892\" />",
+      "css": ".ds-field-label { display:block; margin-bottom:4px; color:var(--muted, #6c675f); font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif; font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; } .ds-field { width:100%; box-sizing:border-box; padding:10px 14px; border:1px solid var(--line-strong, #d9cfbd); border-radius:10px; background:var(--surface, #ffffff); color:var(--ink, #22201d); font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif; font-size:14px; caret-color:var(--action, #2f5fd2); } .ds-field:hover { border-color:var(--action, #2f5fd2); } .ds-field:focus { border-color:var(--action, #2f5fd2); outline:3px solid var(--action-tint, #eaf0ff); outline-offset:0; }"
+    },
+    {
+      "name": "Neutral Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Pill tag for paradigms, counts, and inactive state.",
+      "html": "<span class=\"ds-chip\">PS-26139</span>",
+      "css": ".ds-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border:1px solid var(--line-strong, #d9cfbd); border-radius:999px; background:var(--surface-tint, #fbf8f2); color:var(--muted, #6c675f); font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif; font-size:12px; font-weight:800; white-space:nowrap; } .ds-chip:focus-visible { outline:3px solid var(--action, #2f5fd2); outline-offset:2px; }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "chip-good",
+      "description": "Tinted status pill; swap the wash/text pair for warn or bad.",
+      "html": "<span class=\"ds-chip-good\">Stream connected</span> <span class=\"ds-chip-warn\">Untrained</span> <span class=\"ds-chip-bad\">Action</span>",
+      "css": ".ds-chip-good, .ds-chip-warn, .ds-chip-bad { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border:1px solid transparent; border-radius:999px; font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif; font-size:12px; font-weight:800; white-space:nowrap; } .ds-chip-good { background:var(--good-tint, #e6f4ec); color:var(--good, #2f7d5b); } .ds-chip-warn { background:var(--warn-tint, #fbf1e0); color:var(--warn, #a9681f); } .ds-chip-bad { background:var(--bad-tint, #fbeae7); color:var(--bad, #b23a2f); }"
+    },
+    {
+      "name": "Surface Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Primary soft-cornered card with a hairline seam and one diffuse lift.",
+      "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">Live kennel</h2><p class=\"ds-card-body\">One shared view of the kennel stream.</p></section>",
+      "css": ".ds-card { padding:28px; border:1px solid var(--line, #e8e1d4); border-radius:24px; background:var(--surface, #ffffff); box-shadow:0 6px 20px -6px rgba(34,32,29,0.12), 0 2px 6px -2px rgba(34,32,29,0.06); font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif; } .ds-card-title { margin:0 0 8px; color:var(--ink, #22201d); font-size:18px; font-weight:800; letter-spacing:-0.01em; } .ds-card-body { margin:0; color:var(--muted, #6c675f); font-size:15px; line-height:1.5; }"
+    },
+    {
+      "name": "Small Surface",
+      "kind": "card",
+      "refersTo": "card-sm",
+      "description": "Flat 16px-radius tile for metric stat pairs and empty states.",
+      "html": "<div class=\"ds-card-sm\"><span class=\"ds-label\">Motion · RMS</span><span class=\"ds-num\">0.42 g</span></div>",
+      "css": ".ds-card-sm { display:flex; flex-direction:column; gap:4px; padding:18px 20px; border:1px solid var(--line, #e8e1d4); border-radius:16px; background:var(--surface, #ffffff); font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif; } .ds-label { color:var(--muted, #6c675f); font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; } .ds-num { color:var(--ink, #22201d); font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; }"
+    },
+    {
+      "name": "Tab",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "Pill segmented control; active tab uses the action wash.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button class=\"ds-tab ds-tab-active\" role=\"tab\" aria-selected=\"true\">Model Trainer</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Benchmark</button></div>",
+      "css": ".ds-tabs { display:flex; flex-wrap:wrap; gap:8px; } .ds-tab { padding:9px 16px; border:1px solid var(--line-strong, #d9cfbd); border-radius:999px; background:var(--surface, #ffffff); color:var(--muted, #6c675f); font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif; font-size:13px; font-weight:700; cursor:pointer; } .ds-tab:hover { color:var(--ink, #22201d); } .ds-tab:focus-visible { outline:3px solid var(--action, #2f5fd2); outline-offset:2px; } .ds-tab-active { border-color:var(--action, #2f5fd2); background:var(--action-tint, #eaf0ff); color:var(--action, #2f5fd2); }"
+    },
+    {
+      "name": "Navigation Link",
+      "kind": "nav",
+      "refersTo": "nav-active",
+      "description": "Sticky-header pill nav item with active action-wash state.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main\"><a class=\"ds-nav-link ds-nav-active\" href=\"#\" aria-current=\"page\">Dashboard</a><a class=\"ds-nav-link\" href=\"#\">Diagnostics</a></nav>",
+      "css": ".ds-nav { display:flex; flex-wrap:wrap; gap:4px; } .ds-nav-link { display:inline-flex; align-items:center; gap:7px; padding:9px 14px; border-radius:999px; color:var(--muted, #6c675f); font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif; font-size:13px; font-weight:700; text-decoration:none; } .ds-nav-link:hover { background:var(--surface, #ffffff); color:var(--ink, #22201d); } .ds-nav-link:focus-visible { outline:3px solid var(--action, #2f5fd2); outline-offset:2px; } .ds-nav-active { background:var(--action-tint, #eaf0ff); color:var(--action, #2f5fd2); }"
+    },
+    {
+      "name": "Progress Bar",
+      "kind": "custom",
+      "refersTo": "progress-fill",
+      "description": "Hairline-track meter; fill is action or a status colour when it represents a reading.",
+      "html": "<div class=\"ds-progress\" role=\"progressbar\" aria-label=\"Malignancy risk\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"62\"><div class=\"ds-progress-fill\" style=\"width:62%\"></div></div>",
+      "css": ".ds-progress { width:100%; height:10px; border-radius:999px; background:var(--line, #e8e1d4); overflow:hidden; } .ds-progress-fill { height:100%; border-radius:999px; background:var(--action, #2f5fd2); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Well-Made Laboratory Console",
+    "overview": "QMLKit looks and behaves like a well-made consumer product that happens to show laboratory data. A warm off-white ground carries white, soft-cornered surfaces separated by hairline seams; the only saturated accent is a single indigo action colour reserved for controls and meaningful state. The console is dense enough for telemetry, but plain-spoken: the live route comes first, and each screen leads with what needs attention rather than a wall of identical metric cards.\n\nConfidence is expressed honestly. Status colour is assigned to real conditions — a live stream, an untrained model, an elevated reading — and never invented to decorate a screen. An `untrained` diagnosis is a normal, expected state with its own calm treatment, and every screening view carries its research-aid disclaimer. Depth is quiet: a hairline border and one soft, diffuse shadow, never glow, glass, gradients, or neon instrument-panel effects.",
+    "keyCharacteristics": [
+      "Warm ground (#f6f1e8) with white, soft-cornered surfaces (#ffffff) and hairline seams (#e8e1d4).",
+      "One indigo action colour (#2f5fd2); good/warn/bad (#2f7d5b / #a9681f / #b23a2f) only for honest state.",
+      "Self-hosted variable humanist sans (Nunito Sans, 400–800) with tabular numerals for every reading.",
+      "8px spacing rhythm, 24/16/10px radii, pill-shaped controls, 1280px container.",
+      "Flat at rest with one soft offset shadow on primary surfaces; one restrained press easing, disabled under reduced motion."
+    ],
+    "rules": [
+      { "name": "The One Action Colour Rule", "body": "Indigo (#2f5fd2) is the only interactive accent. Status colours never become buttons and the action colour never becomes a status — rarity is what makes 'actionable' readable.", "section": "colors" },
+      { "name": "The Honest State Rule", "body": "Good/warn/bad are earned by real connection, model, and reading state. `untrained` is shown as warn, never as a fabricated result, and every screening surface states that it is a research aid.", "section": "colors" },
+      { "name": "The Tabular Figures Rule", "body": "Every telemetry or metric number uses `.num` (tabular-nums). Values that change live must not shift width as they update.", "section": "typography" },
+      { "name": "The Hairline Seam Rule", "body": "Separation comes first from a 1px border (#e8e1d4), not a heavy shadow. One soft shadow per primary card is the ceiling; no layered, hard-offset, or coloured glow shadows.", "section": "elevation" },
+      { "name": "The Restrained Press Rule", "body": "The only motion is a 180ms press (`cubic-bezier(0.22, 1, 0.36, 1)`, scale 0.97) on buttons; colour changes run at 160ms ease. Under `prefers-reduced-motion` the press is removed and colour transitions shorten to 120ms linear.", "section": "elevation" },
+      { "name": "The Soft Corners Rule", "body": "Cards are soft-cornered, controls are pill-shaped, and every radius comes from the 24/16/10/pill scale. Nothing is square-cornered or sharply cut.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do keep exactly one interactive accent — Action Indigo (#2f5fd2) — and use status colours only for earned state.",
+      "Do show `untrained`, disconnected, and empty states explicitly with their calm treatments and keep every screening surface labelled as a research aid.",
+      "Do apply `.num` tabular figures to all changing readings, and consume palette values from the CSS custom properties rather than duplicating hex literals.",
+      "Do use the 24/16/10/pill radius scale and the single soft surface lift; let hairline borders do most of the separating."
+    ],
+    "donts": [
+      "Don't add neon glows, glass/backdrop-filter panels, gradients, or coloured/hard-offset shadows — the world is flat and warm.",
+      "Don't introduce a second action colour, promote a status colour to a control, or fabricate a result to make a screen look complete.",
+      "Don't render live figures in proportional type, or scale the press animation beyond the single restrained 180ms button press."
+    ]
+  }
+}
